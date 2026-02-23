@@ -42,6 +42,12 @@ REQUIRED_COLUMNS = [
     "visible_area_size",
 ]
 
+# Percorsi di default (coerenti con il notebook).
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MODELS_DIR = PROJECT_ROOT / "models"
+DEFAULT_MODEL_PATH = DEFAULT_MODELS_DIR / "xg_model_360.joblib"
+DEFAULT_HOLDOUT_PATH = DEFAULT_MODELS_DIR / "holdout_match_ids.json"
+
 
 def distance_to_goal(x: float, y: float) -> float:
     return math.hypot(GOAL_X - x, GOAL_Y - y)
@@ -118,6 +124,16 @@ def load_three_sixty(three_sixty_dir: Path, match_id: str) -> Dict[str, dict]:
     path = three_sixty_dir / f"{match_id}.json"
     frames = json.loads(path.read_text())
     return {f.get("event_uuid"): f for f in frames if f.get("event_uuid")}
+
+
+def load_holdout_match_ids(path: Path) -> List[str]:
+    """Carica la lista dei match holdout (creata dal notebook)."""
+    if not path.exists():
+        raise FileNotFoundError(f"Holdout file non trovato: {path}")
+    data = json.loads(path.read_text())
+    if not isinstance(data, list):
+        raise ValueError("Il file holdout_match_ids.json deve contenere una lista di match_id.")
+    return [str(mid) for mid in data]
 
 
 def extract_360_features(frame: dict, shot_x: float, shot_y: float) -> dict:
@@ -238,6 +254,29 @@ def score_match(
     return shots
 
 
+def score_matches(
+    model_path: Path,
+    data_root: Path,
+    match_ids: List[str],
+    require_360: bool,
+) -> pd.DataFrame:
+    """Score multipli match con lo stesso modello."""
+    all_shots = []
+    for mid in match_ids:
+        shots = score_match(
+            model_path=model_path,
+            data_root=data_root,
+            match_id=mid,
+            require_360=require_360,
+        )
+        all_shots.append(shots)
+
+    if not all_shots:
+        return pd.DataFrame()
+
+    return pd.concat(all_shots, ignore_index=True)
+
+
 def summarize(shots: pd.DataFrame) -> pd.DataFrame:
     return (
         shots.groupby("team", dropna=False)
@@ -251,11 +290,44 @@ def summarize(shots: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def summarize_by_match(shots: pd.DataFrame) -> pd.DataFrame:
+    """Summary per match e per team (utile per holdout)."""
+    return (
+        shots.groupby(["match_id", "team"], dropna=False)
+        .agg(
+            shots=("event_id", "count"),
+            xg=("xg", "sum"),
+            goals=("goal", "sum"),
+        )
+        .reset_index()
+        .sort_values(["match_id", "xg"], ascending=[True, False])
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", required=True, help="Path to joblib model file")
+    parser.add_argument(
+        "--model-path",
+        default=str(DEFAULT_MODEL_PATH),
+        help="Path to joblib model file (default: models/xg_model_360.joblib)",
+    )
     parser.add_argument("--data-root", required=True, help="StatsBomb data root (contains events/ and three-sixty/)")
-    parser.add_argument("--match-id", required=True, help="Match id to score")
+    parser.add_argument("--match-id", help="Match id to score (ignored if --score-holdout)")
+    parser.add_argument(
+        "--models-dir",
+        default=str(DEFAULT_MODELS_DIR),
+        help="Cartella modelli (default: <project>/models)",
+    )
+    parser.add_argument(
+        "--holdout-path",
+        default=str(DEFAULT_HOLDOUT_PATH),
+        help="File JSON con match holdout (default: models/holdout_match_ids.json)",
+    )
+    parser.add_argument(
+        "--score-holdout",
+        action="store_true",
+        help="Score dei match holdout salvati dal notebook",
+    )
     parser.add_argument(
         "--require-360",
         action="store_true",
@@ -263,9 +335,47 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    models_dir = Path(args.models_dir)
+    data_root = Path(args.data_root)
+
+    # Se l'utente usa --models-dir e non specifica un path custom, risolvo i default da lì.
+    model_path = Path(args.model_path)
+    if args.model_path == str(DEFAULT_MODEL_PATH) and args.models_dir:
+        model_path = models_dir / DEFAULT_MODEL_PATH.name
+
+    holdout_path = Path(args.holdout_path)
+    if args.holdout_path == str(DEFAULT_HOLDOUT_PATH) and args.models_dir:
+        holdout_path = models_dir / DEFAULT_HOLDOUT_PATH.name
+
+    if args.score_holdout:
+        # Carico i match holdout dal file creato nel notebook.
+        holdout_match_ids = load_holdout_match_ids(holdout_path)
+        if not holdout_match_ids:
+            raise ValueError("Lista holdout vuota: nulla da score.")
+
+        shots = score_matches(
+            model_path=model_path,
+            data_root=data_root,
+            match_ids=holdout_match_ids,
+            require_360=args.require_360,
+        )
+
+        summary_by_match = summarize_by_match(shots)
+        print("\nHoldout summary (open play):")
+        print(summary_by_match.to_string(index=False))
+
+        total_xg = shots["xg"].sum()
+        total_goals = shots["goal"].sum()
+        print(f"\nTotale holdout open-play xG: {total_xg:.3f}")
+        print(f"Totale holdout open-play goals: {total_goals}")
+        return
+
+    if not args.match_id:
+        parser.error("Devi fornire --match-id oppure usare --score-holdout.")
+
     shots = score_match(
-        model_path=Path(args.model_path),
-        data_root=Path(args.data_root),
+        model_path=model_path,
+        data_root=data_root,
         match_id=args.match_id,
         require_360=args.require_360,
     )
