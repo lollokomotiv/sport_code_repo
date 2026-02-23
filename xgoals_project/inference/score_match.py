@@ -47,6 +47,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODELS_DIR = PROJECT_ROOT / "models"
 DEFAULT_MODEL_PATH = DEFAULT_MODELS_DIR / "xg_model_360.joblib"
 DEFAULT_HOLDOUT_PATH = DEFAULT_MODELS_DIR / "holdout_match_ids.json"
+# Data root di default usato nel notebook. Modifica se sposti i dati.
+DEFAULT_DATA_ROOT = Path("/Users/lorenzoguercio/Documents/Projects/sport_data/open-data/data")
 
 
 def distance_to_goal(x: float, y: float) -> float:
@@ -302,6 +304,48 @@ def summarize_by_match(shots: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
         .sort_values(["match_id", "xg"], ascending=[True, False])
     )
+
+
+def score_holdout_matches(
+    model_path: Path = DEFAULT_MODEL_PATH,
+    data_root: Path = DEFAULT_DATA_ROOT,
+    holdout_path: Path = DEFAULT_HOLDOUT_PATH,
+    require_360: bool = True,
+) -> pd.DataFrame:
+    """Score dei match holdout (salvati dal notebook) senza usare la CLI."""
+    holdout_match_ids = load_holdout_match_ids(holdout_path)
+    if not holdout_match_ids:
+        raise ValueError("Lista holdout vuota: nulla da score.")
+    return score_matches(
+        model_path=model_path,
+        data_root=data_root,
+        match_ids=holdout_match_ids,
+        require_360=require_360,
+    )
+
+
+def run_holdout_scoring(
+    model_path: Path = DEFAULT_MODEL_PATH,
+    data_root: Path = DEFAULT_DATA_ROOT,
+    holdout_path: Path = DEFAULT_HOLDOUT_PATH,
+    require_360: bool = True,
+) -> None:
+    """Wrapper comodo: score holdout + stampa summary (equivalente al comando CLI)."""
+    shots = score_holdout_matches(
+        model_path=model_path,
+        data_root=data_root,
+        holdout_path=holdout_path,
+        require_360=require_360,
+    )
+
+    summary_by_match = summarize_by_match(shots)
+    print("\nHoldout summary (open play):")
+    print(summary_by_match.to_string(index=False))
+
+    total_xg = shots["xg"].sum()
+    total_goals = shots["goal"].sum()
+    print(f"\nTotale holdout open-play xG: {total_xg:.3f}")
+    print(f"Totale holdout open-play goals: {total_goals}")
 
 
 def main() -> None:
