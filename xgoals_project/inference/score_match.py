@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score a single match with an xG model and compare to open-play goals."""
+"""Score matches with an xG model and compare to realized goals."""
 
 from __future__ import annotations
 
@@ -19,7 +19,8 @@ LEFT_POST = (GOAL_X, GOAL_Y - GOAL_WIDTH / 2)
 RIGHT_POST = (GOAL_X, GOAL_Y + GOAL_WIDTH / 2)
 
 OPEN_PLAY_PATTERNS = {"Regular Play", "From Counter", "From Keeper", "Other"}
-EXCLUDE_SHOT_TYPES = {"Penalty", "Free Kick"}
+OPEN_PLAY_EXCLUDED_SHOT_TYPES = {"Penalty", "Free Kick"}
+ALLOWED_SHOT_SCOPES = {"open_play", "all_non_penalty"}
 
 REQUIRED_COLUMNS = [
     "distance",
@@ -107,12 +108,30 @@ def point_in_triangle(pt, a, b, c) -> bool:
     return (u >= 0) and (v >= 0) and (u + v <= 1)
 
 
-def is_open_play_shot(event: dict) -> bool:
+def is_scoring_shot(event: dict, shot_scope: str) -> bool:
     if event.get("type", {}).get("name") != "Shot":
         return False
-    if event.get("play_pattern", {}).get("name") not in OPEN_PLAY_PATTERNS:
+    shot_type = event.get("shot", {}).get("type", {}).get("name")
+    play_pattern = event.get("play_pattern", {}).get("name")
+
+    # Penalty escluso in tutti gli scope.
+    if shot_type == "Penalty":
         return False
-    if event.get("shot", {}).get("type", {}).get("name") in EXCLUDE_SHOT_TYPES:
+
+    if shot_scope == "open_play":
+        if play_pattern not in OPEN_PLAY_PATTERNS:
+            return False
+        if shot_type in OPEN_PLAY_EXCLUDED_SHOT_TYPES:
+            return False
+    elif shot_scope != "all_non_penalty":
+        raise ValueError(f"shot_scope non valido: {shot_scope}. Usa uno tra {sorted(ALLOWED_SHOT_SCOPES)}")
+
+    return True
+
+
+def is_open_play_shot(event: dict) -> bool:
+    """Compatibilita' retro: mantiene il vecchio comportamento open-play."""
+    if not is_scoring_shot(event, shot_scope="open_play"):
         return False
     return True
 
@@ -136,6 +155,71 @@ def load_holdout_match_ids(path: Path) -> List[str]:
     if not isinstance(data, list):
         raise ValueError("Il file holdout_match_ids.json deve contenere una lista di match_id.")
     return [str(mid) for mid in data]
+
+
+def build_shot_breakdown(
+    events: List[dict], frames_by_event: Dict[str, dict], match_id: str, shot_scope: str
+) -> pd.DataFrame:
+    """Conteggi debug per capire cosa entra (o no) nello scope di scoring."""
+    teams = sorted(
+        {
+            e.get("team", {}).get("name")
+            for e in events
+            if e.get("team", {}).get("name")
+        }
+    )
+    counts = {
+        team: {
+            "match_id": match_id,
+            "team": team,
+            "shots_total": 0,
+            "shots_in_scope": 0,
+            "shots_in_scope_360": 0,
+            "goals_in_scope": 0,
+        }
+        for team in teams
+    }
+
+    for e in events:
+        team = e.get("team", {}).get("name")
+        if not team:
+            continue
+        if team not in counts:
+            counts[team] = {
+                "match_id": match_id,
+                "team": team,
+                "shots_total": 0,
+                "shots_in_scope": 0,
+                "shots_in_scope_360": 0,
+                "goals_in_scope": 0,
+            }
+
+        if e.get("type", {}).get("name") != "Shot":
+            continue
+
+        counts[team]["shots_total"] += 1
+        if is_scoring_shot(e, shot_scope=shot_scope):
+            counts[team]["shots_in_scope"] += 1
+            if e.get("shot", {}).get("outcome", {}).get("name") == "Goal":
+                counts[team]["goals_in_scope"] += 1
+            if e.get("id") in frames_by_event:
+                counts[team]["shots_in_scope_360"] += 1
+
+    rows = list(counts.values())
+    if not rows:
+        return pd.DataFrame(
+            columns=["match_id", "team", "shots_total", "shots_in_scope", "shots_in_scope_360", "goals_in_scope"]
+        )
+    return pd.DataFrame(rows).sort_values(["match_id", "team"])
+
+
+def debug_shot_breakdown(data_root: Path, match_id: str, shot_scope: str) -> pd.DataFrame:
+    """Breakdown debug per un singolo match."""
+    events_dir = data_root / "events"
+    three_sixty_dir = data_root / "three-sixty"
+    events = load_events(events_dir, match_id)
+    frames_by_event = load_three_sixty(three_sixty_dir, match_id)
+    return build_shot_breakdown(events, frames_by_event, match_id, shot_scope=shot_scope)
 
 
 def extract_360_features(frame: dict, shot_x: float, shot_y: float) -> dict:
@@ -184,10 +268,11 @@ def build_shot_rows(
     frames_by_event: Dict[str, dict],
     match_id: str,
     require_360: bool,
+    shot_scope: str,
 ) -> List[dict]:
     rows = []
     for e in events:
-        if not is_open_play_shot(e):
+        if not is_scoring_shot(e, shot_scope=shot_scope):
             continue
 
         event_id = e.get("id")
@@ -235,6 +320,7 @@ def score_match(
     data_root: Path,
     match_id: str,
     require_360: bool,
+    shot_scope: str = "open_play",
 ) -> pd.DataFrame:
     model = joblib.load(model_path)
 
@@ -244,7 +330,7 @@ def score_match(
     events = load_events(events_dir, match_id)
     frames_by_event = load_three_sixty(three_sixty_dir, match_id)
 
-    rows = build_shot_rows(events, frames_by_event, match_id, require_360)
+    rows = build_shot_rows(events, frames_by_event, match_id, require_360, shot_scope=shot_scope)
     shots = pd.DataFrame(rows)
 
     for col in REQUIRED_COLUMNS:
@@ -261,6 +347,7 @@ def score_matches(
     data_root: Path,
     match_ids: List[str],
     require_360: bool,
+    shot_scope: str = "open_play",
 ) -> pd.DataFrame:
     """Score multipli match con lo stesso modello."""
     all_shots = []
@@ -270,6 +357,7 @@ def score_matches(
             data_root=data_root,
             match_id=mid,
             require_360=require_360,
+            shot_scope=shot_scope,
         )
         all_shots.append(shots)
 
@@ -311,6 +399,7 @@ def score_holdout_matches(
     data_root: Path = DEFAULT_DATA_ROOT,
     holdout_path: Path = DEFAULT_HOLDOUT_PATH,
     require_360: bool = True,
+    shot_scope: str = "open_play",
 ) -> pd.DataFrame:
     """Score dei match holdout (salvati dal notebook) senza usare la CLI."""
     holdout_match_ids = load_holdout_match_ids(holdout_path)
@@ -321,6 +410,7 @@ def score_holdout_matches(
         data_root=data_root,
         match_ids=holdout_match_ids,
         require_360=require_360,
+        shot_scope=shot_scope,
     )
 
 
@@ -329,31 +419,47 @@ def run_holdout_scoring(
     data_root: Path = DEFAULT_DATA_ROOT,
     holdout_path: Path = DEFAULT_HOLDOUT_PATH,
     require_360: bool = True,
+    debug_breakdown: bool = False,
+    shot_scope: str = "open_play",
 ) -> None:
     """Wrapper comodo: score holdout + stampa summary (equivalente al comando CLI)."""
-    shots = score_holdout_matches(
+    holdout_match_ids = load_holdout_match_ids(holdout_path)
+    shots = score_matches(
         model_path=model_path,
         data_root=data_root,
-        holdout_path=holdout_path,
+        match_ids=holdout_match_ids,
         require_360=require_360,
+        shot_scope=shot_scope,
     )
 
+    if debug_breakdown:
+        debug_rows = [debug_shot_breakdown(data_root, mid, shot_scope=shot_scope) for mid in holdout_match_ids]
+        debug_df = pd.concat(debug_rows, ignore_index=True) if debug_rows else pd.DataFrame()
+        print(f"\nDebug shot breakdown per team (scope={shot_scope}):")
+        if debug_df.empty:
+            print("Nessun dato disponibile.")
+        else:
+            print(debug_df.to_string(index=False))
+
     summary_by_match = summarize_by_match(shots)
-    print("\nHoldout summary (open play):")
+    print(f"\nHoldout summary (scope={shot_scope}):")
     print(summary_by_match.to_string(index=False))
 
     total_xg = shots["xg"].sum()
     total_goals = shots["goal"].sum()
-    print(f"\nTotale holdout open-play xG: {total_xg:.3f}")
-    print(f"Totale holdout open-play goals: {total_goals}")
+    print(f"\nTotale holdout xG ({shot_scope}): {total_xg:.3f}")
+    print(f"Totale holdout goals ({shot_scope}): {total_goals}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model-path",
-        default=str(DEFAULT_MODEL_PATH),
-        help="Path to joblib model file (default: models/xg_model_360.joblib)",
+        help="Path completo al file joblib del modello",
+    )
+    parser.add_argument(
+        "--model-name",
+        help="Nome modello nella models-dir (es: xg_model_360_no_penalty o xg_model360_no_penalty.joblib)",
     )
     parser.add_argument("--data-root", required=True, help="StatsBomb data root (contains events/ and three-sixty/)")
     parser.add_argument("--match-id", help="Match id to score (ignored if --score-holdout)")
@@ -377,14 +483,31 @@ def main() -> None:
         action="store_true",
         help="Skip shots without 360 frames (recommended for 360 model)",
     )
+    parser.add_argument(
+        "--debug-shot-breakdown",
+        action="store_true",
+        help="Stampa per team: shots_total, shots_in_scope, shots_in_scope_360, goals_in_scope",
+    )
+    parser.add_argument(
+        "--shot-scope",
+        default="open_play",
+        choices=sorted(ALLOWED_SHOT_SCOPES),
+        help="Scope dei tiri da includere nello scoring",
+    )
     args = parser.parse_args()
 
     models_dir = Path(args.models_dir)
     data_root = Path(args.data_root)
 
-    # Se l'utente usa --models-dir e non specifica un path custom, risolvo i default da lì.
-    model_path = Path(args.model_path)
-    if args.model_path == str(DEFAULT_MODEL_PATH) and args.models_dir:
+    if args.model_path and args.model_name:
+        parser.error("Usa solo uno tra --model-path e --model-name.")
+
+    if args.model_name:
+        model_filename = args.model_name if args.model_name.endswith(".joblib") else f"{args.model_name}.joblib"
+        model_path = models_dir / model_filename
+    elif args.model_path:
+        model_path = Path(args.model_path)
+    else:
         model_path = models_dir / DEFAULT_MODEL_PATH.name
 
     holdout_path = Path(args.holdout_path)
@@ -402,16 +525,26 @@ def main() -> None:
             data_root=data_root,
             match_ids=holdout_match_ids,
             require_360=args.require_360,
+            shot_scope=args.shot_scope,
         )
 
+        if args.debug_shot_breakdown:
+            debug_rows = [debug_shot_breakdown(data_root, mid, shot_scope=args.shot_scope) for mid in holdout_match_ids]
+            debug_df = pd.concat(debug_rows, ignore_index=True) if debug_rows else pd.DataFrame()
+            print(f"\nDebug shot breakdown per team (scope={args.shot_scope}):")
+            if debug_df.empty:
+                print("Nessun dato disponibile.")
+            else:
+                print(debug_df.to_string(index=False))
+
         summary_by_match = summarize_by_match(shots)
-        print("\nHoldout summary (open play):")
+        print(f"\nHoldout summary (scope={args.shot_scope}):")
         print(summary_by_match.to_string(index=False))
 
         total_xg = shots["xg"].sum()
         total_goals = shots["goal"].sum()
-        print(f"\nTotale holdout open-play xG: {total_xg:.3f}")
-        print(f"Totale holdout open-play goals: {total_goals}")
+        print(f"\nTotale holdout xG ({args.shot_scope}): {total_xg:.3f}")
+        print(f"Totale holdout goals ({args.shot_scope}): {total_goals}")
         return
 
     if not args.match_id:
@@ -422,16 +555,25 @@ def main() -> None:
         data_root=data_root,
         match_id=args.match_id,
         require_360=args.require_360,
+        shot_scope=args.shot_scope,
     )
 
+    if args.debug_shot_breakdown:
+        debug_df = debug_shot_breakdown(data_root, args.match_id, shot_scope=args.shot_scope)
+        print(f"\nDebug shot breakdown per team (scope={args.shot_scope}):")
+        if debug_df.empty:
+            print("Nessun dato disponibile.")
+        else:
+            print(debug_df.to_string(index=False))
+
     summary = summarize(shots)
-    print("\nMatch summary (open play):")
+    print(f"\nMatch summary (scope={args.shot_scope}):")
     print(summary.to_string(index=False))
 
     total_xg = shots["xg"].sum()
     total_goals = shots["goal"].sum()
-    print(f"\nTotal open-play xG: {total_xg:.3f}")
-    print(f"Total open-play goals: {total_goals}")
+    print(f"\nTotal xG ({args.shot_scope}): {total_xg:.3f}")
+    print(f"Total goals ({args.shot_scope}): {total_goals}")
 
 
 if __name__ == "__main__":

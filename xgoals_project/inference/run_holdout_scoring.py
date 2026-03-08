@@ -14,6 +14,8 @@ from score_match import (
 MODEL_PATH = DEFAULT_MODEL_PATH
 DATA_ROOT = DEFAULT_DATA_ROOT
 HOLDOUT_PATH = DEFAULT_HOLDOUT_PATH
+DEBUG_SHOT_BREAKDOWN = True
+SHOT_SCOPE = "all_non_penalty"
 
 
 def main() -> None:
@@ -22,6 +24,8 @@ def main() -> None:
         data_root=Path(DATA_ROOT),
         holdout_path=Path(HOLDOUT_PATH),
         require_360=False,
+        debug_breakdown=DEBUG_SHOT_BREAKDOWN,
+        shot_scope=SHOT_SCOPE,
     )
 
 
