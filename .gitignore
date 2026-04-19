@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+*.env
+
+# macOS
+.DS_Store
+
+# Model files (large binaries — opzionale, rimuovi se vuoi versionarli)
+# *.joblib

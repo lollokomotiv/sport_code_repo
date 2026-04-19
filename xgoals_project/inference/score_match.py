@@ -9,8 +9,11 @@ import math
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 import pandas as pd
 import joblib
+from mplsoccer import VerticalPitch
 
 GOAL_X = 120
 GOAL_Y = 40
@@ -451,6 +454,128 @@ def run_holdout_scoring(
     print(f"Totale holdout goals ({shot_scope}): {total_goals}")
 
 
+def plot_shot_map(
+    shots: pd.DataFrame,
+    title: str = "Shot Map",
+    save_path: Optional[Path] = None,
+) -> plt.Figure:
+    """
+    Pitch plot verticale con un punto per ogni tiro.
+
+    Dimensione punto  = xG (più grande = più pericoloso)
+    Colore punto      = team (due colori distinti)
+    Contorno dorato   = gol segnato
+    Annotazione       = giocatore + xG al passaggio del mouse non disponibile,
+                        ma i top tiri (xG > 0.3) vengono annotati sul plot.
+    """
+    pitch = VerticalPitch(
+        pitch_type="statsbomb",
+        half=True,
+        pitch_color="#1a1a2e",
+        line_color="#e0e0e0",
+        linewidth=1,
+        goal_type="box",
+    )
+
+    fig, ax = pitch.draw(figsize=(8, 7))
+    fig.patch.set_facecolor("#1a1a2e")
+
+    teams = shots["team"].dropna().unique()
+    palette = ["#00d4ff", "#ff6b6b"]
+    team_colors = {team: palette[i % len(palette)] for i, team in enumerate(sorted(teams))}
+
+    for _, row in shots.iterrows():
+        x, y = row["shot_x"], row["shot_y"]
+        xg = row.get("xg", 0.05)
+        is_goal = row.get("goal", 0) == 1
+        color = team_colors.get(row.get("team"), "#ffffff")
+
+        size = max(50, xg * 800)
+
+        # Gol: contorno dorato spesso
+        if is_goal:
+            pitch.scatter(
+                x, y, ax=ax,
+                s=size * 1.6,
+                color="gold",
+                edgecolors="white",
+                linewidth=1.5,
+                zorder=4,
+                alpha=0.95,
+            )
+
+        pitch.scatter(
+            x, y, ax=ax,
+            s=size,
+            color=color,
+            edgecolors="white" if not is_goal else "#1a1a2e",
+            linewidth=0.8,
+            alpha=0.85,
+            zorder=5,
+        )
+
+        # Annota i tiri più pericolosi (xG > 0.3)
+        if xg > 0.3:
+            player = row.get("player", "")
+            label = f"{player.split()[-1] if player else ''}\n{xg:.2f}"
+            ax.annotate(
+                label,
+                xy=(y, x),
+                fontsize=6,
+                color="white",
+                ha="center",
+                va="bottom",
+                xytext=(0, 6),
+                textcoords="offset points",
+                path_effects=[pe.withStroke(linewidth=2, foreground="#1a1a2e")],
+                zorder=6,
+            )
+
+    # Legenda squadre
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=t)
+        for t, c in team_colors.items()
+    ]
+    legend_elements.append(
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="gold",
+               markersize=10, label="Goal", markeredgecolor="white", markeredgewidth=1)
+    )
+    ax.legend(
+        handles=legend_elements,
+        loc="lower center",
+        ncol=len(legend_elements),
+        frameon=False,
+        fontsize=8,
+        labelcolor="white",
+        bbox_to_anchor=(0.5, -0.04),
+    )
+
+    # Titolo e stats xG
+    summary = (
+        shots.groupby("team")
+        .agg(shots_n=("event_id", "count"), xg_sum=("xg", "sum"), goals=("goal", "sum"))
+        .reset_index()
+        .sort_values("xg_sum", ascending=False)
+    )
+    stats_lines = [
+        f"{r['team']}: {r['shots_n']} tiri | xG {r['xg_sum']:.2f} | Gol {int(r['goals'])}"
+        for _, r in summary.iterrows()
+    ]
+    subtitle = "  —  ".join(stats_lines)
+
+    fig.suptitle(title, color="white", fontsize=13, fontweight="bold", y=1.01)
+    ax.set_title(subtitle, color="#aaaaaa", fontsize=7.5, pad=6)
+
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+        print(f"Shot map salvata in: {save_path}")
+
+    return fig
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -493,6 +618,15 @@ def main() -> None:
         default="open_play",
         choices=sorted(ALLOWED_SHOT_SCOPES),
         help="Scope dei tiri da includere nello scoring",
+    )
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="Genera e mostra la shot map della partita",
+    )
+    parser.add_argument(
+        "--plot-output",
+        help="Salva la shot map in questo path (es: shot_map.png)",
     )
     args = parser.parse_args()
 
@@ -574,6 +708,12 @@ def main() -> None:
     total_goals = shots["goal"].sum()
     print(f"\nTotal xG ({args.shot_scope}): {total_xg:.3f}")
     print(f"Total goals ({args.shot_scope}): {total_goals}")
+
+    if args.plot or args.plot_output:
+        save_path = Path(args.plot_output) if args.plot_output else None
+        fig = plot_shot_map(shots, title=f"Shot Map — match {args.match_id}", save_path=save_path)
+        if args.plot:
+            plt.show()
 
 
 if __name__ == "__main__":
