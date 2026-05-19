@@ -31,9 +31,22 @@ Exploratory analysis on snooker match data. Early-stage project, focused on expl
 
 ---
 
+### [TotoSport](./totosport_project/)
+
+**Domain:** Football | **Tech:** Python, FastAPI, React, PostgreSQL, Docker
+
+A weekly football prediction game webapp for friends. An admin publishes rounds of matches from **Serie A**, **Serie B**, or the **Champions League**; players submit predictions before the deadline and earn points for correct results or exact scores.
+
+- Full-stack web app: FastAPI backend + React/TypeScript/Tailwind frontend
+- JWT authentication (access + refresh tokens)
+- Admin panel: create rounds, add matches, set prediction types, enter results, trigger automatic scoring
+- Player panel: submit predictions, view history, live leaderboard
+- Containerised with Docker and docker-compose
+
+---
+
 ## Coming Soon
 
-- Predictive models for match outcomes (football/other sports)
 - Data engineering pipelines for real-time ingestion and transformation of sports data
 - Interactive dashboards on advanced metrics
 
@@ -42,9 +55,16 @@ Exploratory analysis on snooker match data. Early-stage project, focused on expl
 ## Setup
 
 ```bash
-# For the xGoals project
+# xGoals project
 cd xgoals_project
 pip install -r requirements.txt
+
+# TotoSport
+cd totosport_project
+docker-compose up -d db
+cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
+# In a separate terminal:
+cd frontend && npm install && npm run dev
 ```
 
 StatsBomb data: [github.com/statsbomb/open-data](https://github.com/statsbomb/open-data)
