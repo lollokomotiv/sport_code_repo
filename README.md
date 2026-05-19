@@ -1,50 +1,50 @@
 # Sports Analytics Portfolio
 
-Raccolta di progetti personali che applicano **Data Science, Data Engineering e AI** al mondo dello sport. L'obiettivo è costruire modelli e pipeline di analisi su dataset pubblici, con focus su football e altri sport.
+A collection of personal projects applying **Data Science, Data Engineering, and AI** to the world of sports. The goal is to build models and analysis pipelines on public datasets, with a focus on football and other sports.
 
-> Profilo: Data Engineer & Project Manager nel mondo dei dati — background in consulenza IT/healthcare, applicato qui al dominio sportivo.
+> Profile: Data Engineer & Project Manager in the data space — background in IT/healthcare consulting, applied here to the sports domain.
 
 ---
 
-## Progetti
+## Projects
 
 ### [xGoals Project](./xgoals_project/)
 
-**Dominio:** Football | **Tech:** Python, LightGBM, StatsBomb Open Data, Jupyter
+**Domain:** Football | **Tech:** Python, LightGBM, StatsBomb Open Data, Jupyter
 
-Modelli di **Expected Goals (xG)** e **Expected Assists (xA)** addestrati sui dati open-source di StatsBomb, con dati di freeze frame a 360° per misurare la pressione difensiva e il posizionamento del portiere al momento del tiro.
+**Expected Goals (xG)** and **Expected Assists (xA)** models trained on StatsBomb open-source data, with 360° freeze frame data to measure defensive pressure and goalkeeper positioning at the moment of the shot.
 
-Include una pipeline di inferenza completa (`score_match.py`) per valutare xG tiro per tiro su qualsiasi partita StatsBomb, con output aggregato per squadra.
+Includes a complete inference pipeline (`score_match.py`) to evaluate xG shot-by-shot on any StatsBomb match, with aggregated output per team.
 
-- Due modelli LightGBM: baseline (geometria) + 360-enhanced (posizionamento giocatori)
-- Feature engineering su dati evento e freeze frame
-- Split train/validation/holdout a livello di partita (no data leakage)
-- CLI per inferenza su singola partita o holdout set
+- Two LightGBM models: baseline (geometry) + 360-enhanced (player positioning)
+- Feature engineering on event and freeze frame data
+- Match-level train/validation/holdout split (no data leakage)
+- CLI for inference on a single match or holdout set
 
 ---
 
 ### [Snooker Project](./snooker_project/)
 
-**Dominio:** Snooker | **Tech:** Python, pandas, Jupyter
+**Domain:** Snooker | **Tech:** Python, pandas, Jupyter
 
-Analisi esplorativa su dati di partite di snooker. Progetto in fase iniziale, focalizzato sull'esplorazione dei dataset disponibili e sulle prime analisi statistiche descrittive.
+Exploratory analysis on snooker match data. Early-stage project, focused on exploring available datasets and initial descriptive statistics.
 
 ---
 
-## In arrivo
+## Coming Soon
 
-- Modelli predittivi su risultati di partite (football/altri sport)
-- Pipeline di data engineering per ingestione e trasformazione di dati sportivi in real-time
-- Dashboard interattive su metriche avanzate
+- Predictive models for match outcomes (football/other sports)
+- Data engineering pipelines for real-time ingestion and transformation of sports data
+- Interactive dashboards on advanced metrics
 
 ---
 
 ## Setup
 
 ```bash
-# Per il progetto xGoals
+# For the xGoals project
 cd xgoals_project
 pip install -r requirements.txt
 ```
 
-Dati StatsBomb: [github.com/statsbomb/open-data](https://github.com/statsbomb/open-data)
+StatsBomb data: [github.com/statsbomb/open-data](https://github.com/statsbomb/open-data)

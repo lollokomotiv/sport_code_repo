@@ -54,6 +54,21 @@ DEFAULT_HOLDOUT_PATH = DEFAULT_MODELS_DIR / "holdout_match_ids.json"
 # Data root di default usato nel notebook. Modifica se sposti i dati.
 DEFAULT_DATA_ROOT = Path("/Users/lorenzoguercio/Documents/Projects/sport_data/open-data/data")
 
+DEFAULT_PSHOT_MODEL_PATH = DEFAULT_MODELS_DIR / "xa_pshot_360.joblib"
+DEFAULT_ZONE_XG_PATH     = DEFAULT_MODELS_DIR / "xa_zone_xg_lookup.joblib"
+DEFAULT_XA_HOLDOUT_PATH  = DEFAULT_MODELS_DIR / "xa_holdout_match_ids.json"
+
+INCOMPLETE_PASS_OUTCOMES = {"Incomplete", "Out", "Pass Offside", "Unknown"}
+
+PASS_FEATURE_COLUMNS = [
+    "receiver_dist_goal", "receiver_angle_goal", "passer_dist_goal",
+    "pass_length", "pass_forward", "cross_field_y",
+    "cross", "switch", "through_ball",
+    "height", "body_part", "play_pattern", "technique",
+    "nearest_def_to_receiver", "n_def_2m_receiver", "n_def_3m_receiver",
+    "n_def_5m_receiver", "n_def_between_recv_goal", "n_teammates_5m_receiver",
+]
+
 
 def distance_to_goal(x: float, y: float) -> float:
     return math.hypot(GOAL_X - x, GOAL_Y - y)
@@ -576,6 +591,372 @@ def plot_shot_map(
     return fig
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# xA — Expected Assists
+# xA(key_pass)     = P_shot(pass_features) × xG_model(shot_features)
+# xA(non_key_pass) = P_shot(pass_features) × zone_xg(end_location)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _pass_geometry(start_loc: List, end_loc: List) -> Optional[dict]:
+    if not (isinstance(start_loc, list) and isinstance(end_loc, list)):
+        return None
+    sx, sy = start_loc[0], start_loc[1]
+    ex, ey = end_loc[0], end_loc[1]
+    if sx < 60:
+        sx, sy = 120 - sx, 80 - sy
+        ex, ey = 120 - ex, 80 - ey
+    recv_dist  = math.hypot(ex - GOAL_X, ey - GOAL_Y)
+    angle_den  = (ex - GOAL_X)**2 + (ey - GOAL_Y)**2 - (GOAL_WIDTH / 2)**2
+    recv_angle = max(0.0, math.atan2(GOAL_WIDTH * abs(ey - GOAL_Y), angle_den)) if angle_den != 0 else 0.0
+    return {
+        "start_x_norm": sx, "start_y_norm": sy,
+        "end_x_norm":   ex, "end_y_norm":   ey,
+        "pass_length":         math.hypot(ex - sx, ey - sy),
+        "pass_forward":        ex - sx,
+        "receiver_dist_goal":  recv_dist,
+        "receiver_angle_goal": recv_angle,
+        "passer_dist_goal":    math.hypot(sx - GOAL_X, sy - GOAL_Y),
+        "cross_field_y":       abs(ey - GOAL_Y),
+    }
+
+
+def _pass_meta(pass_data: dict) -> dict:
+    return {
+        "height":       pass_data.get("height", {}).get("name"),
+        "body_part":    pass_data.get("body_part", {}).get("name"),
+        "technique":    pass_data.get("technique", {}).get("name"),
+        "cross":        bool(pass_data.get("cross")),
+        "switch":       bool(pass_data.get("switch")),
+        "through_ball": bool(pass_data.get("through_ball")),
+    }
+
+
+def _pass_360_features(frame: dict, end_x: float, end_y: float) -> dict:
+    ff = frame.get("freeze_frame") or []
+    opponents = [p for p in ff if p.get("teammate") is False and not p.get("keeper")]
+    opp_locs  = [
+        (p["location"][0], p["location"][1]) for p in opponents
+        if isinstance(p.get("location"), list) and len(p["location"]) >= 2
+    ]
+    if opp_locs:
+        dists       = [dist((end_x, end_y), loc) for loc in opp_locs]
+        nearest_def = min(dists)
+        n_def_2m    = sum(1 for d in dists if d <= 2)
+        n_def_3m    = sum(1 for d in dists if d <= 3)
+        n_def_5m    = sum(1 for d in dists if d <= 5)
+    else:
+        nearest_def = None
+        n_def_2m = n_def_3m = n_def_5m = 0
+    n_def_recv_goal = sum(
+        1 for l in opp_locs
+        if l[0] > end_x and abs(l[1] - GOAL_Y) <= (GOAL_WIDTH / 2 + 3)
+    )
+    teammates = [p for p in ff if p.get("teammate") is True and not p.get("actor")]
+    tm_locs   = [
+        (p["location"][0], p["location"][1]) for p in teammates
+        if isinstance(p.get("location"), list) and len(p["location"]) >= 2
+    ]
+    n_tm_5m = sum(1 for l in tm_locs if dist((end_x, end_y), l) <= 5)
+    return {
+        "nearest_def_to_receiver":  nearest_def,
+        "n_def_2m_receiver":        n_def_2m,
+        "n_def_3m_receiver":        n_def_3m,
+        "n_def_5m_receiver":        n_def_5m,
+        "n_def_between_recv_goal":  n_def_recv_goal,
+        "n_teammates_5m_receiver":  n_tm_5m,
+    }
+
+
+def _zone_xg_lookup(end_x: float, end_y: float, zone_data: dict) -> float:
+    import bisect
+    x_bins      = zone_data["x_bins"]
+    y_bins      = zone_data["y_bins"]
+    zone_xg_map = zone_data["zone_xg_map"]
+    global_avg  = zone_data["global_avg_xg"]
+    if end_x < 60:
+        end_x, end_y = 120 - end_x, 80 - end_y
+    d      = math.hypot(end_x - GOAL_X, end_y - GOAL_Y)
+    aden   = (end_x - GOAL_X)**2 + (end_y - GOAL_Y)**2 - (GOAL_WIDTH / 2)**2
+    angle  = max(0.0, math.atan2(GOAL_WIDTH * abs(end_y - GOAL_Y), aden)) if aden != 0 else 0.0
+    x_val  = max(float(x_bins[0]),  GOAL_X - d)
+    y_val  = min(float(y_bins[-1]) - 0.01, GOAL_Y + angle * 10)
+    xi = max(0, min(bisect.bisect_right(x_bins, x_val) - 1, len(x_bins) - 2))
+    yi = max(0, min(bisect.bisect_right(y_bins, y_val) - 1, len(y_bins) - 2))
+    return zone_xg_map.get((xi, yi), global_avg)
+
+
+def build_pass_rows(
+    events: List[dict],
+    frames_by_event: Dict[str, dict],
+    match_id: str,
+) -> List[dict]:
+    shots_by_kp: Dict[str, dict] = {
+        e["shot"].get("key_pass_id"): e
+        for e in events
+        if e.get("type", {}).get("name") == "Shot" and e.get("shot", {}).get("key_pass_id")
+    }
+    rows = []
+    for e in events:
+        if e.get("type", {}).get("name") != "Pass":
+            continue
+        p = e.get("pass", {})
+        outcome_name = p.get("outcome", {}).get("name") if p.get("outcome") else None
+        if outcome_name in INCOMPLETE_PASS_OUTCOMES:
+            continue
+        event_id  = e.get("id")
+        start_loc = e.get("location", [])
+        end_loc   = p.get("end_location", [])
+        frame     = frames_by_event.get(event_id, {})
+        geom      = _pass_geometry(start_loc, end_loc)
+        if geom is None:
+            continue
+        shot = shots_by_kp.get(event_id)
+        row = {
+            "match_id":      match_id,
+            "event_id":      event_id,
+            "team":          e.get("team", {}).get("name"),
+            "player":        e.get("player", {}).get("name"),
+            "pass_start_x":  start_loc[0] if len(start_loc) > 0 else None,
+            "pass_start_y":  start_loc[1] if len(start_loc) > 1 else None,
+            "pass_end_x":    end_loc[0]   if len(end_loc)   > 0 else None,
+            "pass_end_y":    end_loc[1]   if len(end_loc)   > 1 else None,
+            "shot_assist":   bool(p.get("shot_assist")),
+            "goal_assist":   bool(p.get("goal_assist")),
+            "shot_event_id": shot.get("id") if shot else None,
+            "play_pattern":  e.get("play_pattern", {}).get("name"),
+            **geom,
+            **_pass_meta(p),
+            **(
+                _pass_360_features(frame, geom["end_x_norm"], geom["end_y_norm"])
+                if frame
+                else {c: None for c in [
+                    "nearest_def_to_receiver", "n_def_2m_receiver", "n_def_3m_receiver",
+                    "n_def_5m_receiver", "n_def_between_recv_goal", "n_teammates_5m_receiver",
+                ]}
+            ),
+        }
+        rows.append(row)
+    return rows
+
+
+def score_xa_match(
+    pshot_model_path: Path,
+    xg_model_path: Path,
+    zone_xg_path: Path,
+    data_root: Path,
+    match_id: str,
+) -> pd.DataFrame:
+    """Score xA for every completed pass in a match.
+
+    Key pass:     xA = P_shot(pass_features) × xG_model(shot_features)
+    Non-key pass: xA = P_shot(pass_features) × zone_xg(pass_end_location)
+    """
+    pshot_model = joblib.load(pshot_model_path)
+    xg_model    = joblib.load(xg_model_path)
+    zone_data   = joblib.load(zone_xg_path)
+
+    events          = load_events(data_root / "events", match_id)
+    frames_by_event = load_three_sixty(data_root / "three-sixty", match_id)
+
+    pass_rows = build_pass_rows(events, frames_by_event, match_id)
+    passes    = pd.DataFrame(pass_rows)
+    if passes.empty:
+        return passes
+
+    for col in PASS_FEATURE_COLUMNS:
+        if col not in passes.columns:
+            passes[col] = None
+
+    passes["p_shot"]  = pshot_model.predict_proba(passes[PASS_FEATURE_COLUMNS])[:, 1]
+    passes["shot_xg"] = None
+
+    # xG from the actual shot for key passes
+    key_mask = passes["shot_assist"] & passes["shot_event_id"].notna()
+    if key_mask.any():
+        shot_feats, valid_idx = [], []
+        events_by_id = {e.get("id"): e for e in events}
+        for idx, row in passes[key_mask].iterrows():
+            shot_event = events_by_id.get(row["shot_event_id"])
+            if shot_event is None:
+                continue
+            loc = shot_event.get("location", [])
+            if len(loc) < 2:
+                continue
+            x, y  = loc[0], loc[1]
+            frame = frames_by_event.get(row["shot_event_id"], {})
+            feat  = {
+                "distance":      distance_to_goal(x, y),
+                "angle":         shot_angle(x, y),
+                "body_part":     shot_event.get("shot", {}).get("body_part", {}).get("name"),
+                "shot_type":     shot_event.get("shot", {}).get("type", {}).get("name"),
+                "shot_technique": shot_event.get("shot", {}).get("technique", {}).get("name"),
+                "play_pattern":  shot_event.get("play_pattern", {}).get("name"),
+                "first_time":    shot_event.get("shot", {}).get("first_time"),
+                "one_on_one":    shot_event.get("shot", {}).get("one_on_one"),
+                "under_pressure": shot_event.get("under_pressure"),
+            }
+            feat.update(extract_360_features(frame, x, y) if frame else
+                        {c: None for c in REQUIRED_COLUMNS if c not in feat})
+            shot_feats.append(feat)
+            valid_idx.append(idx)
+
+        if shot_feats:
+            shot_df = pd.DataFrame(shot_feats)
+            for col in REQUIRED_COLUMNS:
+                if col not in shot_df.columns:
+                    shot_df[col] = None
+            passes.loc[valid_idx, "shot_xg"] = xg_model.predict_proba(shot_df)[:, 1]
+
+    # Zone xG fallback for everything else
+    passes["zone_xg"] = passes.apply(
+        lambda r: _zone_xg_lookup(
+            r.get("pass_end_x") or 60.0,
+            r.get("pass_end_y") or 40.0,
+            zone_data,
+        ),
+        axis=1,
+    )
+
+    passes["xg_used"] = passes["shot_xg"].fillna(passes["zone_xg"])
+    passes["xa"]      = passes["p_shot"] * passes["xg_used"]
+    return passes
+
+
+def score_xa_matches(
+    pshot_model_path: Path,
+    xg_model_path: Path,
+    zone_xg_path: Path,
+    data_root: Path,
+    match_ids: List[str],
+) -> pd.DataFrame:
+    frames = [
+        score_xa_match(pshot_model_path, xg_model_path, zone_xg_path, data_root, mid)
+        for mid in match_ids
+    ]
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
+def summarize_xa(passes: pd.DataFrame) -> pd.DataFrame:
+    return (
+        passes.groupby("team", dropna=False)
+        .agg(
+            passes=("event_id", "count"),
+            xa=("xa", "sum"),
+            key_passes=("shot_assist", "sum"),
+            goal_assists=("goal_assist", "sum"),
+        )
+        .reset_index()
+        .sort_values("xa", ascending=False)
+    )
+
+
+def plot_assist_map(
+    passes: pd.DataFrame,
+    title: str = "Assist Map",
+    save_path: Optional[Path] = None,
+) -> "plt.Figure":
+    """Pitch plot with one arrow+dot per key pass, sized by xA.
+
+    Arrow: from pass start to end (receiver position).
+    Dot size: xA value. Gold: goal assist.
+    Top key passes (xA > 0.08) are annotated with player name.
+    """
+    key_passes = passes[passes["shot_assist"]].copy()
+    if key_passes.empty:
+        raise ValueError("Nessun key pass da visualizzare.")
+
+    pitch = VerticalPitch(
+        pitch_type="statsbomb",
+        half=True,
+        pitch_color="#1a1a2e",
+        line_color="#e0e0e0",
+        linewidth=1,
+        goal_type="box",
+    )
+    fig, ax = pitch.draw(figsize=(8, 7))
+    fig.patch.set_facecolor("#1a1a2e")
+
+    teams = key_passes["team"].dropna().unique()
+    palette = ["#00d4ff", "#ff6b6b"]
+    team_colors = {t: palette[i % len(palette)] for i, t in enumerate(sorted(teams))}
+
+    for _, row in key_passes.iterrows():
+        x_end   = row.get("pass_end_x")
+        y_end   = row.get("pass_end_y")
+        x_start = row.get("pass_start_x")
+        y_start = row.get("pass_start_y")
+        if x_end is None or y_end is None:
+            continue
+
+        xa      = float(row.get("xa", 0.01))
+        is_goal = bool(row.get("goal_assist", False))
+        color   = team_colors.get(row.get("team"), "#ffffff")
+        arrow_color = "gold" if is_goal else color
+
+        if x_start is not None and y_start is not None:
+            pitch.arrows(
+                x_start, y_start, x_end, y_end, ax=ax,
+                width=1.5, headwidth=5, headlength=4,
+                color=arrow_color,
+                alpha=0.65 if is_goal else 0.3,
+                zorder=3,
+            )
+
+        size = max(40, xa * 1200)
+        if is_goal:
+            pitch.scatter(x_end, y_end, ax=ax, s=size * 1.6,
+                          color="gold", edgecolors="white", linewidth=1.5,
+                          zorder=5, alpha=0.95)
+        pitch.scatter(x_end, y_end, ax=ax, s=size,
+                      color=color, edgecolors="white" if not is_goal else "#1a1a2e",
+                      linewidth=0.8, alpha=0.85, zorder=6)
+
+        if xa > 0.08:
+            player = row.get("player", "")
+            label  = f"{player.split()[-1] if player else ''}\n{xa:.2f}"
+            ax.annotate(
+                label, xy=(y_end, x_end),
+                fontsize=6, color="white", ha="center", va="bottom",
+                xytext=(0, 6), textcoords="offset points",
+                path_effects=[pe.withStroke(linewidth=2, foreground="#1a1a2e")],
+                zorder=7,
+            )
+
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=t)
+        for t, c in team_colors.items()
+    ]
+    legend_elements.append(
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="gold",
+               markersize=10, label="Goal assist",
+               markeredgecolor="white", markeredgewidth=1)
+    )
+    ax.legend(handles=legend_elements, loc="lower center",
+              ncol=len(legend_elements), frameon=False, fontsize=8,
+              labelcolor="white", bbox_to_anchor=(0.5, -0.04))
+
+    summary = (
+        key_passes.groupby("team")
+        .agg(kp_n=("event_id", "count"), xa_sum=("xa", "sum"), goals=("goal_assist", "sum"))
+        .reset_index()
+        .sort_values("xa_sum", ascending=False)
+    )
+    stats_lines = [
+        f"{r['team']}: {r['kp_n']} key pass | xA {r['xa_sum']:.2f} | Assist {int(r['goals'])}"
+        for _, r in summary.iterrows()
+    ]
+    fig.suptitle(title, color="white", fontsize=13, fontweight="bold", y=1.01)
+    ax.set_title("  —  ".join(stats_lines), color="#aaaaaa", fontsize=7.5, pad=6)
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+        print(f"Assist map salvata in: {save_path}")
+
+    return fig
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -627,6 +1008,31 @@ def main() -> None:
     parser.add_argument(
         "--plot-output",
         help="Salva la shot map in questo path (es: shot_map.png)",
+    )
+    # ── xA options ────────────────────────────────────────────────────────────
+    parser.add_argument(
+        "--score-xa",
+        action="store_true",
+        help="Calcola xA per tutti i passaggi completati (oltre a xG)",
+    )
+    parser.add_argument(
+        "--pshot-model-path",
+        default=str(DEFAULT_PSHOT_MODEL_PATH),
+        help="Path al modello P_shot (xa_pshot_360.joblib)",
+    )
+    parser.add_argument(
+        "--zone-xg-path",
+        default=str(DEFAULT_ZONE_XG_PATH),
+        help="Path al zone xG lookup (xa_zone_xg_lookup.joblib)",
+    )
+    parser.add_argument(
+        "--plot-assist-map",
+        action="store_true",
+        help="Genera e mostra l'assist map della partita",
+    )
+    parser.add_argument(
+        "--assist-map-output",
+        help="Salva l'assist map in questo path (es: assist_map.png)",
     )
     args = parser.parse_args()
 
@@ -714,6 +1120,30 @@ def main() -> None:
         fig = plot_shot_map(shots, title=f"Shot Map — match {args.match_id}", save_path=save_path)
         if args.plot:
             plt.show()
+
+    if args.score_xa:
+        passes = score_xa_match(
+            pshot_model_path=Path(args.pshot_model_path),
+            xg_model_path=model_path,
+            zone_xg_path=Path(args.zone_xg_path),
+            data_root=data_root,
+            match_id=args.match_id,
+        )
+        xa_summary = summarize_xa(passes)
+        print(f"\nxA summary — match {args.match_id}:")
+        print(xa_summary.to_string(index=False))
+        total_xa      = passes["xa"].sum()
+        total_assists = passes["goal_assist"].sum()
+        print(f"\nTotal xA: {total_xa:.3f}")
+        print(f"Total goal assists: {int(total_assists)}")
+
+        if args.plot_assist_map or args.assist_map_output:
+            save_path = Path(args.assist_map_output) if args.assist_map_output else None
+            fig = plot_assist_map(
+                passes, title=f"Assist Map — match {args.match_id}", save_path=save_path
+            )
+            if args.plot_assist_map:
+                plt.show()
 
 
 if __name__ == "__main__":
