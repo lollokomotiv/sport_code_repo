@@ -6,36 +6,42 @@ A weekly football prediction game for friends. Every week an admin publishes a s
 
 ## How it works
 
-1. **Admin** creates a weekly round and selects matches from the chosen competition.
-2. For each match the admin decides the prediction type:
-   - **Sign** — predict the outcome: home win (1), draw (X), or away win (2).
-   - **Exact score** — predict the precise final scoreline (awarded on selected matches only).
-3. Players submit predictions before the round deadline.
-4. Once matches are played the admin enters the results and the system computes points automatically.
-5. A live leaderboard tracks cumulative scores across all rounds.
+1. **At the start of the season** — each player fills in a **Tabellone** (season-long prediction sheet): who wins the Scudetto, who gets relegated, top scorers, cup winners, and more.
+2. **Every week** — the admin creates a round, selects matches, and sets a deadline. Players predict the **exact score** for every match plus the **total goals** for the round.
+3. Once matches are played the admin enters the results and the system computes points automatically.
+4. A live leaderboard tracks cumulative scores across all rounds and the season.
 
-### Scoring
+### Weekly Scoring
 
-| Prediction type | Correct | Wrong |
-|---|---|---|
-| Sign (1/X/2) | 2 pts | 0 pts |
-| Exact score | 5 pts | 0 pts |
+| Prediction | Points |
+|---|---|
+| Correct sign only (1 / X / 2) | 1 pt |
+| Exact score — home win (e.g. 2-1) | 6 pts |
+| Exact score — draw (e.g. 1-1) | 8 pts |
+| Exact score — away win (e.g. 0-2) | 10 pts |
+| Bonus: match with 5+ goals (exact score required) | +2 pts |
+| Correct total goals for the round | 3 pts |
+| Weekend top-3 bonus | 6 / 4 / 2 pts |
+
+> Full scoring rules and season-long Tabellone points: see [`docs/rules/REGOLAMENTO.md`](docs/rules/REGOLAMENTO.md).
 
 ---
 
 ## Features
 
 ### Player
-- Browse open rounds and view selected matches
-- Submit predictions (sign or exact score) before the deadline
+- Fill in the season Tabellone at the start of the year
+- Browse open rounds and submit exact score predictions before the deadline
+- Modify Tabellone predictions during the winter transfer window (with point penalty)
 - View personal prediction history and points per round
-- Live leaderboard
+- Live leaderboard (overall + by category)
 
 ### Admin
-- Create and manage rounds (Serie A / Serie B / Champions League)
-- Add matches and choose prediction type per match
-- Set round deadline and open/close submissions
+- Create and manage seasons and rounds (Serie A / Serie B / Champions League)
+- Add matches manually or fetch fixtures from API-Football
+- Set round deadline and manage round status (draft → open → closed → completed)
 - Enter final results and trigger automatic scoring
+- Enter season outcomes and compute Tabellone points
 - Manage registered players
 
 ---
@@ -44,11 +50,14 @@ A weekly football prediction game for friends. Every week an admin publishes a s
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11 · FastAPI · SQLAlchemy |
-| Database | PostgreSQL |
-| Frontend | React 18 · TypeScript · Tailwind CSS |
+| Backend | Python 3.12 · FastAPI · SQLAlchemy 2.0 (async) |
+| Database | PostgreSQL 16 |
+| Migrations | Alembic |
+| Frontend | React 18 · TypeScript · Vite · Tailwind CSS |
+| State | Zustand · TanStack React Query |
 | Auth | JWT (access + refresh tokens) |
-| Deployment | Docker · docker-compose |
+| External API | API-Football via RapidAPI |
+| Deployment | Docker · Docker Compose · Nginx |
 
 ---
 
@@ -58,44 +67,88 @@ A weekly football prediction game for friends. Every week an admin publishes a s
 totosport_project/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py          # FastAPI entry point
-│   │   ├── config.py        # Settings (env vars)
-│   │   ├── database.py      # SQLAlchemy session
+│   │   ├── main.py          # FastAPI entry point + lifespan
+│   │   ├── config.py        # Settings (pydantic-settings, reads .env)
+│   │   ├── database.py      # Async SQLAlchemy engine + get_db dependency
 │   │   ├── models/          # ORM models
 │   │   ├── routers/         # API route handlers
-│   │   ├── schemas/         # Pydantic schemas
-│   │   └── services/        # Business logic (auth, scoring)
+│   │   ├── schemas/         # Pydantic v2 schemas
+│   │   └── services/        # Business logic (auth, scoring, fixtures)
+│   ├── migrations/          # Alembic migrations
+│   ├── tests/
 │   ├── requirements.txt
-│   └── Dockerfile
+│   ├── Dockerfile
+│   └── pyproject.toml       # black / isort / mypy / pytest config
 ├── frontend/
 │   ├── src/
+│   │   ├── api/             # Axios client + endpoint functions
 │   │   ├── components/      # Shared UI components
 │   │   ├── pages/
 │   │   │   ├── admin/       # Admin-only pages
 │   │   │   └── player/      # Player pages
 │   │   ├── hooks/           # Custom React hooks
-│   │   ├── context/         # Auth context
-│   │   └── utils/           # API client, helpers
+│   │   ├── store/           # Zustand stores
+│   │   ├── types/           # TypeScript interfaces
+│   │   └── utils/           # Helpers (deriveSign, formatDate, …)
 │   └── public/
+├── docs/
+│   ├── rules/
+│   │   └── REGOLAMENTO.md   # Official game rules (source of truth)
+│   └── development/         # Step-by-step development plan (11 phases)
 ├── docker-compose.yml
-├── README.md
-└── ARCHITECTURE.md
+├── CLAUDE.md                # Development guide for Claude Code / AI agents
+├── ARCHITECTURE.md
+└── README.md
 ```
 
 ---
 
-## Quick Start
+## Quick Start (local development)
 
 ```bash
 cd totosport_project
 
-# Start backend + database
-docker-compose up -d db
-cd backend && pip install -r requirements.txt
-uvicorn app.main:app --reload
+# 1. Copy and configure environment variables
+cp .env.example .env
+cp .env backend/.env       # backend reads its own .env
 
-# Start frontend
-cd frontend && npm install && npm run dev
+# 2. Start the database
+docker compose up db -d
+
+# 3. Backend
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
+# → http://localhost:8000
+
+# 4. Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
 ```
 
-> Full Docker setup (single command) coming once the stack is finalised.
+**API docs** (auto-generated by FastAPI): http://localhost:8000/docs  
+**Health check**: http://localhost:8000/health
+
+---
+
+## Development Plan
+
+The project is built in 11 phases. See [`docs/development/README.md`](docs/development/README.md) for the full plan and current progress.
+
+| Phase | Description | Status |
+|---|---|---|
+| 1 | Foundation (Docker, Alembic, project structure) | ✅ Done |
+| 2 | Auth & Users (JWT, login, roles) | ⬜ |
+| 3 | Tabellone (season predictions) | ⬜ |
+| 4 | Rounds & Matches | ⬜ |
+| 5 | Predictions & Scoring engine | ⬜ |
+| 6 | Leaderboard & Season bonuses | ⬜ |
+| 7 | API-Football integration | ⬜ |
+| 8 | Frontend foundation | ⬜ |
+| 9 | Frontend player | ⬜ |
+| 10 | Frontend admin | ⬜ |
+| 11 | Deployment | ⬜ |
