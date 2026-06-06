@@ -4,15 +4,30 @@ Obiettivo: un giocatore può compilare il tabellone a inizio stagione; l'admin p
 
 > Fonte di verità per tutte le regole: `docs/rules/REGOLAMENTO.md` §2 e §7.
 
+> **Stato: ✅ Completata.** 23 test (16 unit scoring + 7 integration), verificata end-to-end.
+> Decisioni concordate con l'admin:
+> - Matching **a insiemi** per le voci multi-squadra (retrocesse, playoff, playout, promosse).
+> - Alternativa **"no playoff" 40pt** (e "no playout" 35pt) assegnata se il giocatore ha
+>   indovinato la squadra realmente promossa/retrocessa al posto del playoff/playout.
+> Decisioni prese in autonomia (rivedibili):
+> - Campi del tabellone **opzionali** (consente bozze parziali), non tutti obbligatori.
+> - **SeasonOutcome**: aggiunti `playoff_b_1..6` e `playout_b_1/2` (servono allo scoring);
+>   rimossi i bool `*_via_playoff/_via_playout` (ridondanti). Tenuti `playoffs_held`/`playout_held`.
+> - Parità capocannoniere: co-vincitori separati da virgola; 15pt divisi (floor), bonus gol intero.
+> - Promozione "metodo sbagliato" → 50%; **cap modifica** = `floor(50%)` della voce piena.
+> - Colonne di scoring su `table_predictions`: `total_points`, `points_breakdown` (JSONB), `scored_at`.
+> - Aggiunti endpoint admin **stagioni** (`/admin/seasons` create/list/status), necessari al flusso.
+> Fix: `onupdate` di `updated_at` lato Python (evita `MissingGreenlet` async dopo UPDATE).
+
 ---
 
 ## Checklist
 
 ### Modelli ORM
-- [ ] `app/models/table_prediction.py` — modello `TablePrediction` (tutti i campi, vedi `CLAUDE.md` §7)
-- [ ] `app/models/table_modification.py` — modello `TablePredictionModification`
-- [ ] `app/models/season_outcome.py` — modello `SeasonOutcome` (risultati reali della stagione inseriti dall'admin)
-- [ ] Migrazione Alembic
+- [x] `app/models/table_prediction.py` — modello `TablePrediction` (tutti i campi, vedi `CLAUDE.md` §7)
+- [x] `app/models/table_modification.py` — modello `TablePredictionModification`
+- [x] `app/models/season_outcome.py` — modello `SeasonOutcome` (risultati reali della stagione inseriti dall'admin)
+- [x] Migrazione Alembic
 
 ### Modello `SeasonOutcome`
 
@@ -51,16 +66,16 @@ class SeasonOutcome(Base):
 ```
 
 ### Schemas Pydantic
-- [ ] `TablePredictionCreate` — tutti i campi del tabellone, richiesti
-- [ ] `TablePredictionOut` — con flag `is_modifiable` (True se stagione in stato `mercato`)
-- [ ] `TablePredictionModify` — solo i campi che si possono modificare (stessi di Create)
-- [ ] `SeasonOutcomeCreate` / `SeasonOutcomeOut`
+- [x] `TablePredictionCreate` — tutti i campi del tabellone, richiesti
+- [x] `TablePredictionOut` — con flag `is_modifiable` (True se stagione in stato `mercato`)
+- [x] `TablePredictionModify` — solo i campi che si possono modificare (stessi di Create)
+- [x] `SeasonOutcomeCreate` / `SeasonOutcomeOut`
 
 ### Servizio Tabellone (`app/services/tabellone.py`)
 
-- [ ] `submit_tabellone(player_id, season_id, data, db)` — crea o aggiorna (se stagione in `setup` con deadline non superata)
-- [ ] `modify_tabellone(player_id, season_id, changes, db)` — modifica post-mercato, applica penalità, registra modifiche
-- [ ] `score_tabellone(season_id, db)` — calcola i punti per tutti i giocatori basandosi su `SeasonOutcome`
+- [x] `submit_tabellone(player_id, season_id, data, db)` — crea o aggiorna (se stagione in `setup` con deadline non superata)
+- [x] `modify_tabellone(player_id, season_id, changes, db)` — modifica post-mercato, applica penalità, registra modifiche
+- [x] `score_tabellone(season_id, db)` — calcola i punti per tutti i giocatori basandosi su `SeasonOutcome`
 
 ### Logica di scoring del Tabellone
 
@@ -105,16 +120,16 @@ Casi speciali da gestire:
 ### Router Tabellone
 
 **Player**
-- [ ] `POST /tabellone` — compila o aggiorna tabellone (solo se stagione in stato `setup` o `active` prima della deadline)
-- [ ] `GET /tabellone/me` — visualizza il proprio tabellone con punti (se già calcolati)
-- [ ] `PATCH /tabellone/me` — modifica post-mercato (solo se stagione in stato `mercato`, applica penalità)
+- [x] `POST /tabellone` — compila o aggiorna tabellone (solo se stagione in stato `setup` o `active` prima della deadline)
+- [x] `GET /tabellone/me` — visualizza il proprio tabellone con punti (se già calcolati)
+- [x] `PATCH /tabellone/me` — modifica post-mercato (solo se stagione in stato `mercato`, applica penalità)
 
 **Admin**
-- [ ] `GET /admin/tabellone` — tutti i tabelloni dei giocatori per la stagione corrente
-- [ ] `POST /admin/season-outcome` — inserisce/aggiorna i risultati reali della stagione
-- [ ] `GET /admin/season-outcome` — vedi risultati inseriti
-- [ ] `POST /admin/tabellone/score` — calcola e salva i punti per tutti i giocatori
-- [ ] `PATCH /admin/season/{id}/status` — transizione di stato stagione
+- [x] `GET /admin/tabellone` — tutti i tabelloni dei giocatori per la stagione corrente
+- [x] `POST /admin/season-outcome` — inserisce/aggiorna i risultati reali della stagione
+- [x] `GET /admin/season-outcome` — vedi risultati inseriti
+- [x] `POST /admin/tabellone/score` — calcola e salva i punti per tutti i giocatori
+- [x] `PATCH /admin/season/{id}/status` — transizione di stato stagione
 
 ---
 

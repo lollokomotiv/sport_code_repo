@@ -2,42 +2,54 @@
 
 Obiettivo: repo funzionante con DB avviabile, struttura cartelle definita, nessun codice applicativo ancora.
 
+> **Stato: ✅ Backend completato — ⚠️ setup frontend parziale (rimandato).**
+> Backend, Docker (db + backend), Alembic e qualità Python sono a posto.
+> Il setup frontend è volutamente incompleto e verrà chiuso nella **Fase 8**
+> (focus attuale: web app, ma le pagine vere partono dalla Fase 8):
+> - Tailwind **non** installato (manca `tailwindcss` in package.json e `postcss.config.js`)
+> - boilerplate Vite **non** rimosso (`App.tsx`/`index.css` ancora demo)
+> - `tsconfig` **non** in `strict`
+> - **Prettier** non configurato (ESLint sì)
+> - il servizio `frontend` in `docker-compose.yml` è rimandato alla **Fase 11**
+> Nota versioni: lo scaffold è su React 19 / TS 6 / Vite 8 (più recenti dello stack
+> previsto in CLAUDE.md §3, React 18 / TS 5 / Vite 5) — da allineare in Fase 8.
+
 ---
 
 ## Checklist
 
 ### Struttura cartelle
-- [ ] Crea `backend/` con struttura descritta in `CLAUDE.md` §9
-- [ ] Crea `frontend/` con Vite (`npm create vite@latest frontend -- --template react-ts`)
-- [ ] Crea `.env.example` con tutte le variabili (vedi `CLAUDE.md` §10)
-- [ ] Aggiungi `.gitignore` adeguato (`.env`, `__pycache__`, `node_modules`, `.venv`, `dist`)
+- [x] Crea `backend/` con struttura descritta in `CLAUDE.md` §9
+- [x] Crea `frontend/` con Vite (`npm create vite@latest frontend -- --template react-ts`)
+- [x] Crea `.env.example` con tutte le variabili (vedi `CLAUDE.md` §10)
+- [x] Aggiungi `.gitignore` adeguato (`.env`, `__pycache__`, `node_modules`, `.venv`, `dist`)
 
 ### Docker Compose (sviluppo)
-- [ ] `docker-compose.yml` con servizi: `db` (postgres:16), `backend`, `frontend`
-- [ ] Il servizio `db` monta un volume named per la persistenza
-- [ ] `backend` dipende da `db` con healthcheck (`pg_isready`)
-- [ ] Variabili d'ambiente iniettate dal file `.env`
-- [ ] `docker-compose up` avvia tutto, `docker-compose up db` avvia solo il DB per lo sviluppo locale
+- [~] `docker-compose.yml` con servizi: `db` (postgres:16), `backend`, ~~`frontend`~~ (frontend rimandato a Fase 11)
+- [x] Il servizio `db` monta un volume named per la persistenza
+- [x] `backend` dipende da `db` con healthcheck (`pg_isready`)
+- [x] Variabili d'ambiente iniettate dal file `.env`
+- [x] `docker-compose up` avvia tutto, `docker-compose up db` avvia solo il DB per lo sviluppo locale
 
 ### Backend — setup base
-- [ ] `requirements.txt` con versioni pinned (usa `pip-compile` o specifica `>=x.y`)
-- [ ] `app/config.py` con pydantic-settings che legge `.env`
-- [ ] `app/database.py` con `AsyncEngine`, `AsyncSessionLocal`, `get_db` dependency
-- [ ] `app/main.py` con app factory, CORS, lifespan (startup/shutdown), router placeholder
-- [ ] Alembic inizializzato: `alembic init migrations`
-- [ ] `alembic.ini` e `migrations/env.py` configurati per leggere `DATABASE_URL` da env
-- [ ] `alembic upgrade head` eseguito senza errori (migrazione iniziale vuota)
+- [x] `requirements.txt` con versioni pinned (usa `pip-compile` o specifica `>=x.y`)
+- [x] `app/config.py` con pydantic-settings che legge `.env`
+- [x] `app/database.py` con `AsyncEngine`, `AsyncSessionLocal`, `get_db` dependency
+- [x] `app/main.py` con app factory, CORS, lifespan (startup/shutdown), router placeholder
+- [x] Alembic inizializzato: `alembic init migrations`
+- [x] `alembic.ini` e `migrations/env.py` configurati per leggere `DATABASE_URL` da env
+- [x] `alembic upgrade head` eseguito senza errori (migrazione iniziale vuota)
 
-### Frontend — setup base
+### Frontend — setup base  (⚠️ rimandato a Fase 8)
 - [ ] TypeScript `strict: true` in `tsconfig.json`
-- [ ] Tailwind CSS installato e configurato (`tailwind.config.js`, `postcss.config.js`)
-- [ ] `src/api/client.ts` — Axios instance con `baseURL` da `import.meta.env.VITE_API_BASE_URL`
+- [ ] Tailwind CSS installato e configurato (`tailwind.config.js`, `postcss.config.js`) — config presente ma pacchetto non installato
+- [x] `src/api/client.ts` — Axios instance con `baseURL` da `import.meta.env.VITE_API_BASE_URL`
 - [ ] Rimosso tutto il boilerplate di default di Vite (`App.tsx` pulito, `index.css` con solo Tailwind directives)
-- [ ] `npm run dev` → app vuota senza errori
+- [~] `npm run dev` → parte ma mostra ancora la demo Vite
 
 ### Qualità del codice
-- [ ] `black` + `isort` + `mypy` configurati per il backend (`pyproject.toml` o `setup.cfg`)
-- [ ] ESLint + Prettier configurati per il frontend
+- [x] `black` + `isort` + `mypy` configurati per il backend (`pyproject.toml` o `setup.cfg`)
+- [~] ESLint configurato per il frontend; **Prettier mancante** (Fase 8)
 - [ ] Pre-commit hook (opzionale ma consigliato): `pre-commit` con black, isort, eslint
 
 ---

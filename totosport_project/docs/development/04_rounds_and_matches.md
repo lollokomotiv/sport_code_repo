@@ -2,35 +2,45 @@
 
 Obiettivo: l'admin può creare giornate, aggiungere partite manualmente o dalla cache API-Football, e gestire il ciclo di vita della giornata.
 
+> **Stato: ✅ Completata.** 15 test (3 unit status machine + 12 integration), tutto verde.
+> Note / deviazioni:
+> - Violazioni di stato (partita fuori da `draft`, risultato fuori da `closed`, transizione
+>   illegale, duplicati) → **409 Conflict** (invece del 422/403 suggerito dal doc).
+> - `GET /rounds` è **role-aware**: l'admin vede tutte le giornate, il giocatore solo `open`+`completed`.
+> - `open → closed` è **manuale** senza richiedere deadline superata (punto aperto B → job in Fase 7).
+> - `PATCH /matches/{id}/result` persiste il risultato e ha un **hook commentato** per lo scoring (Fase 5).
+> - Enum `competition` condiviso Round/StagedFixture: corretto il `downgrade` della migrazione
+>   per droppare i tipi (`competition`, `roundstatus`), altrimenti il roundtrip falliva.
+
 ---
 
 ## Checklist
 
 ### Modelli ORM
-- [ ] `app/models/round.py` — modello `Round`
-- [ ] `app/models/match.py` — modello `Match`
-- [ ] `app/models/staged_fixture.py` — modello `StagedFixture`
-- [ ] Migrazione Alembic
+- [x] `app/models/round.py` — modello `Round`
+- [x] `app/models/match.py` — modello `Match`
+- [x] `app/models/staged_fixture.py` — modello `StagedFixture`
+- [x] Migrazione Alembic
 
 ### Schemas Pydantic
-- [ ] `RoundCreate`, `RoundOut`, `RoundStatusUpdate`
-- [ ] `MatchCreate` (manuale o da staged fixture), `MatchOut`, `MatchResultUpdate`
-- [ ] `StagedFixtureOut`
+- [x] `RoundCreate`, `RoundOut`, `RoundStatusUpdate`
+- [x] `MatchCreate` (manuale o da staged fixture), `MatchOut`, `MatchResultUpdate`
+- [x] `StagedFixtureOut`
 
 ### Router Rounds (`/rounds`)
-- [ ] `GET /rounds` — lista giornate visibili al player (status `open` o `completed`), paginate
-- [ ] `GET /rounds/{id}` — dettaglio giornata con lista partite
-- [ ] `POST /rounds` — crea nuova giornata (admin)
-- [ ] `PATCH /rounds/{id}/status` — transizione stato (admin)
-- [ ] `DELETE /rounds/{id}` — elimina (solo se in stato `draft`, admin)
+- [x] `GET /rounds` — lista giornate visibili al player (status `open` o `completed`), paginate
+- [x] `GET /rounds/{id}` — dettaglio giornata con lista partite
+- [x] `POST /rounds` — crea nuova giornata (admin)
+- [x] `PATCH /rounds/{id}/status` — transizione stato (admin)
+- [x] `DELETE /rounds/{id}` — elimina (solo se in stato `draft`, admin)
 
 ### Router Matches (`/matches`)
-- [ ] `GET /rounds/{round_id}/matches` — lista partite della giornata
-- [ ] `POST /rounds/{round_id}/matches` — aggiunge partita alla giornata (admin, solo se `draft`)
+- [x] `GET /rounds/{round_id}/matches` — lista partite della giornata
+- [x] `POST /rounds/{round_id}/matches` — aggiunge partita alla giornata (admin, solo se `draft`)
   - Body: manuale (`home_team`, `away_team`, `kickoff`) oppure `staged_fixture_id`
-- [ ] `PATCH /matches/{id}/result` — imposta risultato finale e scatena scoring (admin)
+- [x] `PATCH /matches/{id}/result` — imposta risultato finale e scatena scoring (admin)
   - Richiama `scoring_service.score_match_and_persist(match_id, db)` (implementato in Fase 5)
-- [ ] `DELETE /matches/{id}` — rimuovi partita (admin, solo se round in `draft`)
+- [x] `DELETE /matches/{id}` — rimuovi partita (admin, solo se round in `draft`)
 
 ### Status machine del Round
 
@@ -48,10 +58,10 @@ draft ──► open ──► closed ──► completed
 Nota su **punto aperto B** (`CLAUDE.md` §11): per ora implementa la transizione `open → closed` manuale. Il job automatico può essere aggiunto in Fase 7.
 
 ### Validazioni importanti
-- [ ] Non si può aggiungere una partita a un round non in stato `draft`
-- [ ] Non si può impostare un risultato se il round è in stato `draft` o `open`
-- [ ] La deadline deve essere nel futuro al momento della transizione `draft → open`
-- [ ] Non si possono aggiungere due partite con le stesse squadre nella stessa giornata
+- [x] Non si può aggiungere una partita a un round non in stato `draft`
+- [x] Non si può impostare un risultato se il round è in stato `draft` o `open`
+- [x] La deadline deve essere nel futuro al momento della transizione `draft → open`
+- [x] Non si possono aggiungere due partite con le stesse squadre nella stessa giornata
 
 ---
 

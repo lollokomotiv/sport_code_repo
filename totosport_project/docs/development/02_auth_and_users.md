@@ -2,23 +2,32 @@
 
 Obiettivo: sistema di autenticazione JWT funzionante, con ruoli `admin` e `player`. Modello `Season` creato.
 
+> **Stato: ✅ Completata.** 23 test (10 unit auth + 13 integration), verificata end-to-end.
+> Deviazioni rispetto al doc/CLAUDE.md:
+> - **bcrypt diretto** al posto di `passlib[bcrypt]` (passlib 1.7.4 è incompatibile con
+>   bcrypt 5.x su Python 3.12). Aggiunto `bcrypt` ai requirements, rimosso passlib.
+> - `decode_token` **ritorna `{}`** invece di lanciare `HTTPException`: i service restano
+>   FastAPI-free (CLAUDE.md §9); il 401 lo solleva la dependency.
+> - Endpoint senza header Bearer → **401** (comportamento di `HTTPBearer`), non 403.
+> - Aggiunto `pydantic[email]` per `EmailStr`.
+
 ---
 
 ## Checklist
 
 ### Modelli ORM
-- [ ] `app/models/user.py` — modello `User` (vedi schema in `CLAUDE.md` §7)
-- [ ] `app/models/season.py` — modello `Season` con status enum
-- [ ] Migrazione Alembic: `alembic revision --autogenerate -m "add user season"`
-- [ ] `alembic upgrade head` senza errori
+- [x] `app/models/user.py` — modello `User` (vedi schema in `CLAUDE.md` §7)
+- [x] `app/models/season.py` — modello `Season` con status enum
+- [x] Migrazione Alembic: `alembic revision --autogenerate -m "add user season"`
+- [x] `alembic upgrade head` senza errori
 
 ### Schemas Pydantic
-- [ ] `app/schemas/user.py`: `UserCreate`, `UserOut`, `UserLogin`
-- [ ] `app/schemas/season.py`: `SeasonCreate`, `SeasonOut`
-- [ ] `app/schemas/auth.py`: `TokenPair` (`access_token`, `refresh_token`, `token_type`)
+- [x] `app/schemas/user.py`: `UserCreate`, `UserOut`, `UserLogin`
+- [x] `app/schemas/season.py`: `SeasonCreate`, `SeasonOut`
+- [x] `app/schemas/auth.py`: `TokenPair` (`access_token`, `refresh_token`, `token_type`)
 
 ### Servizio Auth
-- [ ] `app/services/auth.py`:
+- [x] `app/services/auth.py`:
   - `hash_password(plain: str) -> str` — bcrypt
   - `verify_password(plain: str, hashed: str) -> bool`
   - `create_access_token(data: dict) -> str` — JWT, scade in `ACCESS_TOKEN_EXPIRE_MINUTES`
@@ -26,23 +35,23 @@ Obiettivo: sistema di autenticazione JWT funzionante, con ruoli `admin` e `playe
   - `decode_token(token: str) -> dict` — lancia `HTTPException 401` se invalido/scaduto
 
 ### Dependencies FastAPI
-- [ ] `app/dependencies/auth.py`:
+- [x] `app/dependencies/auth.py`:
   - `get_current_user(token, db) -> User` — legge Bearer token, ritorna utente
   - `require_admin(user) -> User` — lancia 403 se `user.role != "admin"`
 
 ### Router Auth (`/auth`)
-- [ ] `POST /auth/login` — body: `{username, password}`, risposta: `TokenPair`
-- [ ] `POST /auth/refresh` — body: `{refresh_token}`, risposta: nuovo `TokenPair`
-- [ ] `POST /auth/register` — solo admin, crea nuovo player; body: `UserCreate`
-- [ ] `GET /auth/me` — utente corrente (player o admin)
+- [x] `POST /auth/login` — body: `{username, password}`, risposta: `TokenPair`
+- [x] `POST /auth/refresh` — body: `{refresh_token}`, risposta: nuovo `TokenPair`
+- [x] `POST /auth/register` — solo admin, crea nuovo player; body: `UserCreate`
+- [x] `GET /auth/me` — utente corrente (player o admin)
 
 ### Router Admin Users (`/admin/users`)
-- [ ] `GET /admin/users` — lista tutti i giocatori (solo admin)
-- [ ] `PATCH /admin/users/{id}` — modifica username/email (solo admin)
-- [ ] `DELETE /admin/users/{id}` — disabilita account (soft delete, solo admin)
+- [x] `GET /admin/users` — lista tutti i giocatori (solo admin)
+- [x] `PATCH /admin/users/{id}` — modifica username/email (solo admin)
+- [x] `DELETE /admin/users/{id}` — disabilita account (soft delete, solo admin)
 
 ### Seed iniziale
-- [ ] Script `backend/scripts/create_admin.py` per creare il primo utente admin da CLI
+- [x] Script `backend/scripts/create_admin.py` per creare il primo utente admin da CLI
   ```
   python scripts/create_admin.py --username admin --email admin@example.com --password <pwd>
   ```

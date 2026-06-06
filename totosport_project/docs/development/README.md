@@ -32,7 +32,7 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 | 1 — Foundation | ✅ Completata |
 | 2 — Auth & Users | ✅ Completata |
 | 3 — Tabellone | ✅ Completata |
-| 4 — Rounds & Matches | ⬜ Non iniziata |
+| 4 — Rounds & Matches | ✅ Completata |
 | 5 — Predictions & Scoring | ⬜ Non iniziata |
 | 6 — Leaderboard & Bonus | ⬜ Non iniziata |
 | 7 — API-Football | ⬜ Non iniziata |
