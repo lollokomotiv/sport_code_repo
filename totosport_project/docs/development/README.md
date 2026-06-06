@@ -29,8 +29,8 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 
 | Fase | Stato |
 |---|---|
-| 1 — Foundation | ⬜ Non iniziata |
-| 2 — Auth & Users | ⬜ Non iniziata |
+| 1 — Foundation | ✅ Completata |
+| 2 — Auth & Users | ✅ Completata |
 | 3 — Tabellone | ⬜ Non iniziata |
 | 4 — Rounds & Matches | ⬜ Non iniziata |
 | 5 — Predictions & Scoring | ⬜ Non iniziata |
