@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.routers import auth, admin_users
+from app.routers import admin_seasons, admin_tabellone, admin_users, auth, tabellone
 
 
 @asynccontextmanager
@@ -39,6 +39,9 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(admin_users.router)
+app.include_router(tabellone.router)
+app.include_router(admin_seasons.router)
+app.include_router(admin_tabellone.router)
 
 
 @app.get("/")
