@@ -1,0 +1,30 @@
+# Dati video e dataset (pesanti, non versionare)
+data/
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# Annotazioni esportate di grandi dimensioni
+*.tfrecord
+
+# Pesi e checkpoint dei modelli
+*.pt
+*.pth
+*.onnx
+*.weights
+checkpoints/
+runs/
+wandb/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Ambiente / OS
+.env
+.DS_Store
