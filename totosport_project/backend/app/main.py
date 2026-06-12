@@ -12,6 +12,7 @@ from app.routers import (
     admin_tabellone,
     admin_users,
     auth,
+    leaderboard,
     matches,
     predictions,
     rounds,
@@ -56,6 +57,7 @@ app.include_router(rounds.router)
 app.include_router(matches.router)
 app.include_router(predictions.router)
 app.include_router(admin_predictions.router)
+app.include_router(leaderboard.router)
 
 
 @app.get("/")

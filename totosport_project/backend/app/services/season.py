@@ -23,6 +23,13 @@ async def get_season(season_id: uuid.UUID, db: AsyncSession) -> Season | None:
     return result.scalar_one_or_none()
 
 
+async def get_latest_season(db: AsyncSession) -> Season | None:
+    """La stagione più recente, di QUALSIASI stato (anche 'closed'): usata dalla
+    leaderboard, che deve restare consultabile dopo la chiusura."""
+    result = await db.execute(select(Season).order_by(Season.created_at.desc()))
+    return result.scalars().first()
+
+
 async def create_season(data: dict, db: AsyncSession) -> Season:
     season = Season(**data)
     db.add(season)

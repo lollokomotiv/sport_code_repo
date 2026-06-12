@@ -8,7 +8,9 @@ from app.database import get_db
 from app.dependencies.auth import require_admin
 from app.models.season import Season
 from app.models.user import User
+from app.schemas.leaderboard import SeasonBonusResult
 from app.schemas.season import SeasonCreate, SeasonOut, SeasonStatusUpdate
+from app.services.leaderboard import finalize_season
 from app.services.season import create_season, get_current_season, get_season, update_status
 
 router = APIRouter(prefix="/admin/seasons", tags=["admin", "seasons"])
@@ -54,3 +56,16 @@ async def set_status(
     if season is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Stagione non trovata")
     return await update_status(season, body.status, db)
+
+
+@router.post("/{season_id}/finalize", response_model=SeasonBonusResult)
+async def finalize(
+    season_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> SeasonBonusResult:
+    """Assegna i 3 bonus di fine stagione (+10) e porta la stagione a 'closed'."""
+    season = await get_season(season_id, db)
+    if season is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stagione non trovata")
+    return await finalize_season(season, db)

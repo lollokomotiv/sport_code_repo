@@ -4,24 +4,37 @@ Obiettivo: classifica generale in tempo reale, classifiche separate per i bonus 
 
 > Fonte di verità: `docs/rules/REGOLAMENTO.md` §5 e §6.
 
+> **Stato: ✅ Completata.** 10 test (5 unit + 5 integration), 91 totali verdi.
+> Scelte di implementazione:
+> - `PlayerSeasonProfile` tenuto MINIMALE: solo i 3 bonus di fine stagione. I punti
+>   tabellone e la penalità mercato si leggono da `TablePrediction.total_points`
+>   (già al netto della penalità, Fase 3) — niente denormalizzazione/drift.
+> - Aggiunte le classifiche per metrica (`/leaderboard/signs|exacts|tabellone`) con uno
+>   schema `MetricLeaderboardEntry`; `LeaderboardEntry` ha in più `season_bonus_total`.
+> - La leaderboard usa `get_latest_season` (qualsiasi stato) così resta consultabile
+>   anche dopo la chiusura della stagione.
+> - Finalizzazione su `POST /admin/seasons/{id}/finalize` (plurale, coerente col resto).
+> - `assign_season_bonus`: nessun bonus se il punteggio migliore è ≤ 0.
+> - Bonus parità: integrale a tutti i pari merito (REGOLAMENTO §6).
+
 ---
 
 ## Checklist
 
 ### Schemas Pydantic
-- [ ] `LeaderboardEntry`: `{rank, player_id, username, total_points, sign_points, exact_points, total_goals_points, tabellone_points, weekend_bonus_total}`
-- [ ] `RoundLeaderboardEntry`: `{rank, player_id, username, round_points, sign_points, exact_points, total_goals_points, weekend_bonus}`
+- [x] `LeaderboardEntry`: `{rank, player_id, username, total_points, sign_points, exact_points, total_goals_points, tabellone_points, weekend_bonus_total}`
+- [x] `RoundLeaderboardEntry`: `{rank, player_id, username, round_points, sign_points, exact_points, total_goals_points, weekend_bonus}`
 
 ### Router Leaderboard (`/leaderboard`)
 
 **Player & Admin:**
-- [ ] `GET /leaderboard` — classifica generale della stagione corrente
+- [x] `GET /leaderboard` — classifica generale della stagione corrente
   - Aggrega tutti i `RoundScore` + penalità tabellone + punti tabellone (se già calcolati)
   - Ordinato per `total_points` DESC
-- [ ] `GET /leaderboard/rounds/{round_id}` — classifica di una singola giornata
-- [ ] `GET /leaderboard/signs` — classifica per soli segni (per bonus fine stagione)
-- [ ] `GET /leaderboard/exacts` — classifica pieni+gol (per bonus fine stagione)
-- [ ] `GET /leaderboard/tabellone` — classifica tabellone (per bonus fine stagione)
+- [x] `GET /leaderboard/rounds/{round_id}` — classifica di una singola giornata
+- [x] `GET /leaderboard/signs` — classifica per soli segni (per bonus fine stagione)
+- [x] `GET /leaderboard/exacts` — classifica pieni+gol (per bonus fine stagione)
+- [x] `GET /leaderboard/tabellone` — classifica tabellone (per bonus fine stagione)
 
 ### Calcolo classifica generale
 
@@ -35,7 +48,7 @@ La classifica generale è la somma di:
 
 ### Admin — Bonus di Fine Stagione (`/admin/season/{id}/finalize`)
 
-- [ ] `POST /admin/season/{id}/finalize` — calcola e assegna i 3 bonus da 10pt
+- [x] `POST /admin/season/{id}/finalize` — calcola e assegna i 3 bonus da 10pt
   1. Recupera classifica segni → trova il/i migliore/i → assegna +10pt a ciascuno
   2. Recupera classifica pieni+gol → stessa logica
   3. Recupera classifica tabellone → stessa logica

@@ -9,3 +9,4 @@ from app.models.staged_fixture import StagedFixture  # noqa: F401
 from app.models.match_prediction import MatchPrediction  # noqa: F401
 from app.models.round_prediction import RoundPrediction  # noqa: F401
 from app.models.round_score import RoundScore  # noqa: F401
+from app.models.player_season_profile import PlayerSeasonProfile  # noqa: F401
