@@ -1,56 +1,44 @@
-/**
- * Axios instance centralizzata per tutte le chiamate al backend TotoSport.
- * - Inietta automaticamente il Bearer token ad ogni request
- * - Auto-refresh del token su risposta 401
- * - Redirect al login se il refresh fallisce
- */
+import axios from 'axios'
 
-import axios, { type AxiosInstance } from 'axios'
+import { useAuthStore } from '@/store/authStore'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
-const api: AxiosInstance = axios.create({
+const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 })
 
-// ─── Request interceptor: inietta access token ────────────────────────────────
+// Inietta l'access token ad ogni richiesta
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
+  const token = useAuthStore.getState().accessToken
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-// ─── Response interceptor: gestisce 401 con auto-refresh ─────────────────────
+// Auto-refresh trasparente su 401 (token ruotato dal backend)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config as typeof error.config & { _retry?: boolean }
+    const original = error.config as (typeof error.config & { _retry?: boolean }) | undefined
+    const refreshToken = useAuthStore.getState().refreshToken
 
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry && refreshToken) {
       original._retry = true
-
       try {
-        const refreshToken = localStorage.getItem('refresh_token')
-        if (!refreshToken) throw new Error('no refresh token')
-
         const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
           refresh_token: refreshToken,
         })
-
-        localStorage.setItem('access_token', data.access_token)
+        useAuthStore.getState().setTokens(data.access_token, data.refresh_token)
         original.headers.Authorization = `Bearer ${data.access_token}`
         return api(original)
       } catch {
-        // Refresh fallito → logout
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
+        useAuthStore.getState().logout()
         window.location.href = '/login'
       }
     }
-
     return Promise.reject(error)
   },
 )

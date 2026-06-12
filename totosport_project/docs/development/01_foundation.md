@@ -2,17 +2,14 @@
 
 Obiettivo: repo funzionante con DB avviabile, struttura cartelle definita, nessun codice applicativo ancora.
 
-> **Stato: ✅ Backend completato — ⚠️ setup frontend parziale (rimandato).**
-> Backend, Docker (db + backend), Alembic e qualità Python sono a posto.
-> Il setup frontend è volutamente incompleto e verrà chiuso nella **Fase 8**
-> (focus attuale: web app, ma le pagine vere partono dalla Fase 8):
-> - Tailwind **non** installato (manca `tailwindcss` in package.json e `postcss.config.js`)
-> - boilerplate Vite **non** rimosso (`App.tsx`/`index.css` ancora demo)
-> - `tsconfig` **non** in `strict`
-> - **Prettier** non configurato (ESLint sì)
-> - il servizio `frontend` in `docker-compose.yml` è rimandato alla **Fase 11**
-> Nota versioni: lo scaffold è su React 19 / TS 6 / Vite 8 (più recenti dello stack
-> previsto in CLAUDE.md §3, React 18 / TS 5 / Vite 5) — da allineare in Fase 8.
+> **Stato: ✅ Backend completato. Setup frontend chiuso in Fase 8.**
+> Backend, Docker (db + backend), Alembic e qualità Python a posto fin da subito.
+> Il setup frontend, inizialmente incompleto, è stato completato nella **Fase 8**:
+> Tailwind v3 installato + `postcss.config.js`, `tsconfig` in `strict`, Prettier,
+> boilerplate Vite rimosso. Resta rimandato alla **Fase 11** solo il servizio
+> `frontend` in `docker-compose.yml` (deploy).
+> Nota versioni: lo stack è su React 19 / TS 6 / Vite 8 (più recenti di CLAUDE.md §3,
+> React 18 / TS 5 / Vite 5) — scelta confermata in Fase 8, sono compatibili.
 
 ---
 
@@ -40,16 +37,16 @@ Obiettivo: repo funzionante con DB avviabile, struttura cartelle definita, nessu
 - [x] `alembic.ini` e `migrations/env.py` configurati per leggere `DATABASE_URL` da env
 - [x] `alembic upgrade head` eseguito senza errori (migrazione iniziale vuota)
 
-### Frontend — setup base  (⚠️ rimandato a Fase 8)
-- [ ] TypeScript `strict: true` in `tsconfig.json`
-- [ ] Tailwind CSS installato e configurato (`tailwind.config.js`, `postcss.config.js`) — config presente ma pacchetto non installato
+### Frontend — setup base  (✅ completato in Fase 8)
+- [x] TypeScript `strict: true` in `tsconfig.app.json`
+- [x] Tailwind CSS installato e configurato (`tailwind.config.ts`, `postcss.config.js`)
 - [x] `src/api/client.ts` — Axios instance con `baseURL` da `import.meta.env.VITE_API_BASE_URL`
-- [ ] Rimosso tutto il boilerplate di default di Vite (`App.tsx` pulito, `index.css` con solo Tailwind directives)
-- [~] `npm run dev` → parte ma mostra ancora la demo Vite
+- [x] Rimosso tutto il boilerplate di default di Vite (`App.tsx`/`App.css`/assets, `index.css` con direttive Tailwind)
+- [x] `npm run dev` / `npm run build` → app TotoSport senza errori
 
 ### Qualità del codice
 - [x] `black` + `isort` + `mypy` configurati per il backend (`pyproject.toml` o `setup.cfg`)
-- [~] ESLint configurato per il frontend; **Prettier mancante** (Fase 8)
+- [x] ESLint + Prettier configurati per il frontend
 - [ ] Pre-commit hook (opzionale ma consigliato): `pre-commit` con black, isort, eslint
 
 ---

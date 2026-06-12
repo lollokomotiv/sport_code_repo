@@ -2,15 +2,26 @@
 
 Obiettivo: app React funzionante con autenticazione JWT, routing per ruolo, layout base, e client API configurato.
 
+> **Stato: ✅ Completata.** `npm run build` verde (0 errori TS); login verificato
+> end-to-end (CORS ok, token ricevuto). Include la chiusura del setup frontend
+> rimasto aperto in Fase 1 (Tailwind v3 installato, `strict` on, Prettier, boilerplate rimosso).
+> Scelte/deviazioni:
+> - **Tailwind v3** (coerente col `tailwind.config.ts` esistente); stack su React 19 /
+>   TS 6 / Vite 8 / react-router 7 / zustand 5 (più recenti del doc, ma compatibili).
+> - **Entrambi i token in localStorage** via zustand `persist`: il backend restituisce
+>   access E refresh nel body (niente cookie HttpOnly). Accettabile per app privata;
+>   il refresh ruota i token a ogni uso. Alias `@/` → `src/` (senza `baseUrl`, deprecato in TS6).
+> - Alle voci di menu non ancora pronte risponde un placeholder "ComingSoon" (Fase 9).
+
 ---
 
 ## Checklist
 
 ### Setup Vite + React + TypeScript
-- [ ] `vite.config.ts` con proxy per dev: `/api → http://localhost:8000`
-- [ ] `tsconfig.json` con `strict: true`, path aliases (`@/` → `src/`)
-- [ ] Tailwind CSS funzionante con design system base (colori custom nel `tailwind.config.ts`)
-- [ ] Font: Inter o Geist (ottima leggibilità per classifiche e numeri)
+- [x] `vite.config.ts` con proxy per dev: `/api → http://localhost:8000`
+- [x] `tsconfig.json` con `strict: true`, path aliases (`@/` → `src/`)
+- [x] Tailwind CSS funzionante con design system base (colori custom nel `tailwind.config.ts`)
+- [x] Font: Inter o Geist (ottima leggibilità per classifiche e numeri)
 
 ### API Client (`src/api/client.ts`)
 
@@ -88,12 +99,12 @@ const router = createBrowserRouter([
 ```
 
 ### Componenti Layout
-- [ ] `ProtectedLayout` — controlla auth, redirecta se non loggato
-- [ ] `PlayerLayout` — navbar con: Giornate, Le mie previsioni, Classifica, Tabellone
-- [ ] `AdminLayout` — navbar con: Dashboard, Giornate, Fixture, Tabellone, Classifica, Giocatori
-- [ ] `LoadingSpinner` — usato da React Query durante il fetching
-- [ ] `ErrorBoundary` — cattura errori React
-- [ ] `PageTitle` — wrapper con `<h1>` e breadcrumb opzionale
+- [x] `ProtectedLayout` — controlla auth, redirecta se non loggato
+- [x] `PlayerLayout` — navbar con: Giornate, Le mie previsioni, Classifica, Tabellone
+- [x] `AdminLayout` — navbar con: Dashboard, Giornate, Fixture, Tabellone, Classifica, Giocatori
+- [x] `LoadingSpinner` — usato da React Query durante il fetching
+- [x] `ErrorBoundary` — cattura errori React
+- [x] `PageTitle` — wrapper con `<h1>` e breadcrumb opzionale
 
 ### Tipi TypeScript (`src/types/`)
 
@@ -118,10 +129,10 @@ interface LeaderboardEntry { rank: number; player_id: string; username: string; 
 ```
 
 ### Utilities (`src/utils/`)
-- [ ] `deriveSign(home: number, away: number): '1' | 'X' | '2'`
-- [ ] `formatDate(iso: string): string` — es. "Sab 12 Apr, 20:45"
-- [ ] `formatCompetition(comp: string): string` — es. "serie_a" → "Serie A"
-- [ ] `isDeadlinePassed(deadline: string): boolean`
+- [x] `deriveSign(home: number, away: number): '1' | 'X' | '2'`
+- [x] `formatDate(iso: string): string` — es. "Sab 12 Apr, 20:45"
+- [x] `formatCompetition(comp: string): string` — es. "serie_a" → "Serie A"
+- [x] `isDeadlinePassed(deadline: string): boolean`
 
 ---
 
