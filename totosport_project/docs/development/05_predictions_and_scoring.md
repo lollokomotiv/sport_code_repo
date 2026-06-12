@@ -4,21 +4,35 @@ Obiettivo: i giocatori inseriscono le previsioni prima della deadline; quando l'
 
 > Fonte di verità: `docs/rules/REGOLAMENTO.md` §3, §4, §5. Pseudocodice in `CLAUDE.md` §8.
 
+> **Stato: ✅ Completata.** 20 test (13 unit scoring + 7 integration), 81 totali verdi.
+> Decisione concordata con l'admin:
+> - **Totale gol PER LEGA**: una giornata può combinare Serie A e Serie B; il giocatore
+>   inserisce due totali gol distinti (uno per A, uno per B). Solo Serie A/B (no coppe).
+>   → ha richiesto di aggiungere `competition` a `Match` (ritocco Fase 4) e di rendere
+>   `RoundPrediction` per (player, round, competition).
+> - **Bonus parità**: i pari merito prendono il bonus del posto PIÙ ALTO (es. due 2° → 4 ciascuno,
+>   3° non assegnato). L'esempio nell'acceptance qui sotto era errato ed è stato corretto.
+> Scelte di implementazione:
+> - `score_match_and_persist` aggiorna i punti per-partita; `RoundScore` aggregato + bonus
+>   weekend si calcolano in `finalize_round` (transizione `closed → completed`).
+> - Previsioni in upsert (modificabili finché giornata `open` e deadline non passata — punto aperto A).
+> - Viste admin delle previsioni accessibili solo dopo la deadline.
+
 ---
 
 ## Checklist
 
 ### Modelli ORM
-- [ ] `app/models/match_prediction.py` — `MatchPrediction` (vedi `CLAUDE.md` §7)
-- [ ] `app/models/round_prediction.py` — `RoundPrediction` (totale gol giornata)
-- [ ] `app/models/round_score.py` — `RoundScore` (score aggregato per player/round)
-- [ ] Migrazione Alembic
+- [x] `app/models/match_prediction.py` — `MatchPrediction` (vedi `CLAUDE.md` §7)
+- [x] `app/models/round_prediction.py` — `RoundPrediction` (totale gol giornata)
+- [x] `app/models/round_score.py` — `RoundScore` (score aggregato per player/round)
+- [x] Migrazione Alembic
 
 ### Schemas Pydantic
-- [ ] `MatchPredictionCreate`: `{match_id, predicted_home_goals, predicted_away_goals}`
-- [ ] `MatchPredictionOut`: include `points_earned`, `derived_sign`
-- [ ] `RoundPredictionCreate`: `{round_id, total_goals_guess}`
-- [ ] `RoundScoreOut`: tutti i campi del `RoundScore`
+- [x] `MatchPredictionCreate`: `{match_id, predicted_home_goals, predicted_away_goals}`
+- [x] `MatchPredictionOut`: include `points_earned`, `derived_sign`
+- [x] `RoundPredictionCreate`: `{round_id, total_goals_guess}`
+- [x] `RoundScoreOut`: tutti i campi del `RoundScore`
 
 ### Servizio Scoring (`app/services/scoring.py`)
 
@@ -116,17 +130,17 @@ async def finalize_round(round_id: UUID, db: AsyncSession) -> None:
 ### Router Predictions (`/predictions`)
 
 **Player:**
-- [ ] `POST /predictions/match` — inserisce/aggiorna previsione per una partita (upsert)
+- [x] `POST /predictions/match` — inserisce/aggiorna previsione per una partita (upsert)
   - Controlla: round `open`, deadline non superata, partita nel round
   - Body: `MatchPredictionCreate`
-- [ ] `POST /predictions/round-goals` — inserisce/aggiorna previsione totale gol (upsert)
+- [x] `POST /predictions/round-goals` — inserisce/aggiorna previsione totale gol (upsert)
   - Stessi controlli
-- [ ] `GET /predictions/me?round_id=...` — le proprie previsioni per una giornata
-- [ ] `GET /predictions/me/history` — tutte le previsioni con punti, paginate per round
+- [x] `GET /predictions/me?round_id=...` — le proprie previsioni per una giornata
+- [x] `GET /predictions/me/history` — tutte le previsioni con punti, paginate per round
 
 **Admin:**
-- [ ] `GET /admin/predictions/{round_id}` — tutte le previsioni di tutti i giocatori per una giornata (solo dopo deadline)
-- [ ] `GET /admin/predictions/{round_id}/{match_id}` — previsioni per una singola partita
+- [x] `GET /admin/predictions/{round_id}` — tutte le previsioni di tutti i giocatori per una giornata (solo dopo deadline)
+- [x] `GET /admin/predictions/{round_id}/{match_id}` — previsioni per una singola partita
 
 ---
 
@@ -149,19 +163,19 @@ Questo permette di calcolare le 3 classifiche separate di fine stagione:
 ## Test di accettazione fase 5
 
 ### Test unitari (niente DB, solo funzioni pure)
-- [ ] `score_match(2, 1, 2, 1)` → `(1, 5)` — casa esatto
-- [ ] `score_match(1, 1, 1, 1)` → `(1, 7)` — pareggio esatto
-- [ ] `score_match(0, 2, 0, 2)` → `(1, 9)` — trasferta esatto
-- [ ] `score_match(3, 3, 3, 3)` → `(1, 7+2)` = `(1, 9)` — pareggio esatto con 6+ gol (6 gol totali ≥ 5)
-- [ ] `score_match(2, 1, 1, 0)` → `(1, 0)` — segno giusto (casa), esatto sbagliato
-- [ ] `score_match(0, 1, 1, 0)` → `(0, 0)` — segno sbagliato
-- [ ] `score_total_goals(5, [(2,1),(1,1)])` → `3` — totale giusto
-- [ ] `score_total_goals(6, [(2,1),(1,1)])` → `0` — totale sbagliato
-- [ ] `assign_weekend_bonus([("A",10),("B",8),("C",8),("D",5)])` → `{"A":6,"B":2,"C":2}` — parità 2°/3°
+- [x] `score_match(2, 1, 2, 1)` → `(1, 5)` — casa esatto
+- [x] `score_match(1, 1, 1, 1)` → `(1, 7)` — pareggio esatto
+- [x] `score_match(0, 2, 0, 2)` → `(1, 9)` — trasferta esatto
+- [x] `score_match(3, 3, 3, 3)` → `(1, 7+2)` = `(1, 9)` — pareggio esatto con 6+ gol (6 gol totali ≥ 5)
+- [x] `score_match(2, 1, 1, 0)` → `(1, 0)` — segno giusto (casa), esatto sbagliato
+- [x] `score_match(0, 1, 1, 0)` → `(0, 0)` — segno sbagliato
+- [x] `score_total_goals(5, [(2,1),(1,1)])` → `3` — totale giusto
+- [x] `score_total_goals(6, [(2,1),(1,1)])` → `0` — totale sbagliato
+- [x] `assign_weekend_bonus([("A",10),("B",8),("C",8),("D",5)])` → `{"A":6,"B":4,"C":4}` — parità per il 2° posto: bonus del posto più alto a entrambi, 3° non assegnato (REGOLAMENTO §5)
 
 ### Test di integrazione
-- [ ] Player inserisce previsione per tutte le partite + totale gol
-- [ ] Player tenta di inserire dopo deadline → 403
-- [ ] Admin imposta risultato → `MatchPrediction.points_earned` aggiornato
-- [ ] Dopo tutti i risultati → `RoundScore` creato con tutti i campi corretti
-- [ ] Weekend bonus assegnato correttamente, incluso caso di parità
+- [x] Player inserisce previsione per tutte le partite + totale gol
+- [x] Player tenta di inserire dopo deadline → 403
+- [x] Admin imposta risultato → `MatchPrediction.points_earned` aggiornato
+- [x] Dopo tutti i risultati → `RoundScore` creato con tutti i campi corretti
+- [x] Weekend bonus assegnato correttamente, incluso caso di parità

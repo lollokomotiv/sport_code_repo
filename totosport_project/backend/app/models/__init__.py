@@ -6,3 +6,6 @@ from app.models.season_outcome import SeasonOutcome  # noqa: F401
 from app.models.round import Round  # noqa: F401
 from app.models.match import Match  # noqa: F401
 from app.models.staged_fixture import StagedFixture  # noqa: F401
+from app.models.match_prediction import MatchPrediction  # noqa: F401
+from app.models.round_prediction import RoundPrediction  # noqa: F401
+from app.models.round_score import RoundScore  # noqa: F401

@@ -2,12 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, SmallInteger, String, text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, SmallInteger, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.models.round import Competition
 
 
 class Match(Base):
@@ -24,6 +25,11 @@ class Match(Base):
     )
     round_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rounds.id", ondelete="CASCADE"), nullable=False
+    )
+    # Lega della singola partita: in una giornata 'mixed' serve per sommare i gol
+    # per lega (totale gol di Serie A vs Serie B).
+    competition: Mapped[Competition] = mapped_column(
+        Enum(Competition, name="competition"), nullable=False
     )
     home_team: Mapped[str] = mapped_column(String(80), nullable=False)
     away_team: Mapped[str] = mapped_column(String(80), nullable=False)

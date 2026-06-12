@@ -11,6 +11,8 @@ Obiettivo: l'admin può creare giornate, aggiungere partite manualmente o dalla 
 > - `PATCH /matches/{id}/result` persiste il risultato e ha un **hook commentato** per lo scoring (Fase 5).
 > - Enum `competition` condiviso Round/StagedFixture: corretto il `downgrade` della migrazione
 >   per droppare i tipi (`competition`, `roundstatus`), altrimenti il roundtrip falliva.
+> - **Aggiornamento in Fase 5**: a `Match` è stato aggiunto il campo `competition` (lega della
+>   singola partita), necessario per il totale gol per lega nelle giornate combinate.
 
 ---
 

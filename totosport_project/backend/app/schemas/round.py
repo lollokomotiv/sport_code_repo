@@ -11,10 +11,11 @@ from app.models.round import Competition, RoundStatus
 
 
 class MatchCreate(BaseModel):
-    """Aggiunta partita: manuale (home/away/kickoff) oppure da una staged fixture."""
+    """Aggiunta partita: manuale (home/away/competition/kickoff) o da staged fixture."""
 
     home_team: Optional[str] = None
     away_team: Optional[str] = None
+    competition: Optional[Competition] = None  # obbligatoria per inserimento manuale
     kickoff: Optional[datetime] = None
     staged_fixture_id: Optional[uuid.UUID] = None
 
@@ -27,6 +28,7 @@ class MatchResultUpdate(BaseModel):
 class MatchOut(BaseModel):
     id: uuid.UUID
     round_id: uuid.UUID
+    competition: Competition
     home_team: str
     away_team: str
     kickoff: Optional[datetime]

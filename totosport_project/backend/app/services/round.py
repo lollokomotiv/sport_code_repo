@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.match import Match
 from app.models.round import Round, RoundStatus
 from app.models.staged_fixture import StagedFixture
+from app.services.scoring import finalize_round, score_match_and_persist
 
 # Transizioni di stato ammesse
 ALLOWED_TRANSITIONS: dict[RoundStatus, set[RoundStatus]] = {
@@ -135,7 +136,8 @@ async def transition_status(rnd: Round, new_status: RoundStatus, db: AsyncSessio
         if rnd.deadline is None or rnd.deadline <= _now():
             raise RoundPreconditionError("La deadline deve essere impostata e nel futuro")
 
-    if rnd.status == RoundStatus.closed and new_status == RoundStatus.completed:
+    finalizing = rnd.status == RoundStatus.closed and new_status == RoundStatus.completed
+    if finalizing:
         matches = await list_matches(rnd.id, db)
         missing = [m for m in matches if m.actual_home_goals is None or m.actual_away_goals is None]
         if missing:
@@ -143,6 +145,11 @@ async def transition_status(rnd: Round, new_status: RoundStatus, db: AsyncSessio
 
     rnd.status = new_status
     await db.flush()
+
+    # Alla chiusura definitiva: calcola RoundScore aggregato + bonus weekend (Fase 5)
+    if finalizing:
+        await finalize_round(rnd.id, db)
+
     return rnd
 
 
@@ -164,14 +171,18 @@ async def add_match(rnd: Round, data: dict, db: AsyncSession) -> Match:
         home_team, away_team = fixture.home_team, fixture.away_team
         kickoff = fixture.kickoff
         api_fixture_id = fixture.api_fixture_id
+        competition = fixture.competition
         fixture.added_to_round = True
     else:
         home_team = data.get("home_team")
         away_team = data.get("away_team")
         kickoff = data.get("kickoff")
+        competition = data.get("competition")
         api_fixture_id = None
         if not home_team or not away_team:
             raise RoundError("Servono home_team e away_team (o uno staged_fixture_id)")
+        if competition is None:
+            raise RoundError("La competizione della partita è obbligatoria")
 
     # Niente due partite con le stesse squadre nella stessa giornata
     dup = await db.scalar(
@@ -188,6 +199,7 @@ async def add_match(rnd: Round, data: dict, db: AsyncSession) -> Match:
 
     match = Match(
         round_id=rnd.id,
+        competition=competition,
         home_team=home_team,
         away_team=away_team,
         kickoff=kickoff,
@@ -215,6 +227,7 @@ async def set_match_result(
     match.actual_home_goals = home_goals
     match.actual_away_goals = away_goals
     await db.flush()
-    # Hook Fase 5: qui verrà richiamato lo scoring della partita
-    # (scoring_service.score_match_and_persist(match.id, db)).
+    # Scoring per-partita (Fase 5): aggiorna points_earned di ogni previsione.
+    # L'aggregato di giornata + bonus weekend avviene in finalize_round (closed→completed).
+    await score_match_and_persist(match.id, db)
     return match

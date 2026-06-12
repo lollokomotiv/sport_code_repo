@@ -57,11 +57,11 @@ async def _create_round(client, admin, **overrides) -> str:
     return r.json()["id"]
 
 
-async def _add_match(client, admin, round_id, home, away) -> str:
+async def _add_match(client, admin, round_id, home, away, competition="serie_a") -> str:
     r = await client.post(
         f"/rounds/{round_id}/matches",
         headers=_auth(admin),
-        json={"home_team": home, "away_team": away},
+        json={"home_team": home, "away_team": away, "competition": competition},
     )
     assert r.status_code == 201, r.text
     return r.json()["id"]
@@ -112,7 +112,9 @@ async def test_cannot_add_match_to_open_round(client: AsyncClient, admin, season
     await _add_match(client, admin, rid, "Inter", "Milan")
     await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "open"})
     r = await client.post(
-        f"/rounds/{rid}/matches", headers=_auth(admin), json={"home_team": "Roma", "away_team": "Lazio"}
+        f"/rounds/{rid}/matches",
+        headers=_auth(admin),
+        json={"home_team": "Roma", "away_team": "Lazio", "competition": "serie_a"},
     )
     assert r.status_code == 409
 
@@ -121,7 +123,9 @@ async def test_duplicate_match_rejected(client: AsyncClient, admin, season):
     rid = await _create_round(client, admin)
     await _add_match(client, admin, rid, "Inter", "Milan")
     r = await client.post(
-        f"/rounds/{rid}/matches", headers=_auth(admin), json={"home_team": "Inter", "away_team": "Milan"}
+        f"/rounds/{rid}/matches",
+        headers=_auth(admin),
+        json={"home_team": "Inter", "away_team": "Milan", "competition": "serie_a"},
     )
     assert r.status_code == 409
 
