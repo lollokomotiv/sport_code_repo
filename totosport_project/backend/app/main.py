@@ -16,6 +16,7 @@ from app.routers import (
     matches,
     predictions,
     rounds,
+    seasons,
     tabellone,
 )
 
@@ -54,6 +55,7 @@ app.include_router(tabellone.router)
 app.include_router(admin_seasons.router)
 app.include_router(admin_tabellone.router)
 app.include_router(rounds.router)
+app.include_router(seasons.router)
 app.include_router(matches.router)
 app.include_router(predictions.router)
 app.include_router(admin_predictions.router)

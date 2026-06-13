@@ -7,8 +7,10 @@ import ProtectedLayout from '@/components/layouts/ProtectedLayout'
 import AdminHome from '@/pages/admin/AdminHome'
 import Login from '@/pages/Login'
 import Leaderboard from '@/pages/player/Leaderboard'
+import MyPredictions from '@/pages/player/MyPredictions'
 import RoundDetail from '@/pages/player/RoundDetail'
 import RoundsList from '@/pages/player/RoundsList'
+import Tabellone from '@/pages/player/Tabellone'
 import RoleHome from '@/pages/RoleHome'
 
 export const router = createBrowserRouter([
@@ -25,8 +27,8 @@ export const router = createBrowserRouter([
           { index: true, element: <RoundsList /> },
           { path: 'rounds/:id', element: <RoundDetail /> },
           { path: 'leaderboard', element: <Leaderboard /> },
-          { path: 'predictions', element: <ComingSoon title="Le mie previsioni" /> },
-          { path: 'tabellone', element: <ComingSoon title="Tabellone" /> },
+          { path: 'predictions', element: <MyPredictions /> },
+          { path: 'tabellone', element: <Tabellone /> },
         ],
       },
       {
