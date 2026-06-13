@@ -120,8 +120,9 @@ export default function Tabellone() {
 
   const [form, setForm] = useState<FormState>(emptyForm)
   const [baseline, setBaseline] = useState<FormState | null>(null) // valori salvati (per il mercato)
+  const [isEditing, setIsEditing] = useState(false)
 
-  const tabellone = tabelloneQuery.isError ? null : tabelloneQuery.data
+  const tabellone = tabelloneQuery.isError ? null : (tabelloneQuery.data ?? null)
 
   useEffect(() => {
     if (tabellone) {
@@ -134,11 +135,18 @@ export default function Tabellone() {
   const season = seasonQuery.data
   const status = season?.status
   const isMercato = status === 'mercato'
-  const deadlinePassed = isDeadlinePassed(season?.tabellone_deadline ?? null)
+  // La deadline che conta dipende dallo stato: compilazione vs finestra mercato.
+  const activeDeadline = isMercato
+    ? (season?.modification_deadline ?? null)
+    : (season?.tabellone_deadline ?? null)
+  const deadlinePassed = isDeadlinePassed(activeDeadline)
 
-  // Quando si può scrivere: in mercato sempre; in setup/active solo prima della deadline.
+  // Quando si può scrivere: in mercato fino alla modification_deadline;
+  // in setup/active solo prima della tabellone_deadline.
   const editable =
-    status === 'setup' || (status === 'active' && !deadlinePassed) || isMercato
+    status === 'setup' ||
+    (status === 'active' && !deadlinePassed) ||
+    (isMercato && !deadlinePassed)
 
   const changedKeys = useMemo(() => {
     if (!baseline) return []
@@ -158,6 +166,7 @@ export default function Tabellone() {
       const f = formFromTabellone(data)
       setForm(f)
       setBaseline(f)
+      setIsEditing(false) // torna alla vista riepilogo
     },
   })
 
@@ -172,8 +181,23 @@ export default function Tabellone() {
     )
   }
 
+  // Mostra il form quando si sta modificando, oppure in prima compilazione
+  // (nessun tabellone ancora salvato ma finestra aperta).
+  const showForm = isEditing || (editable && !tabellone)
+
   function update(key: TabelloneFieldKey, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function startEditing() {
+    if (baseline) setForm(baseline) // riparti dai valori salvati
+    mutation.reset()
+    setIsEditing(true)
+  }
+
+  function cancelEditing() {
+    if (baseline) setForm(baseline)
+    setIsEditing(false)
   }
 
   function onSave() {
@@ -196,18 +220,30 @@ export default function Tabellone() {
     : null
 
   return (
-    <div className="pb-24">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold">Tabellone {season.name}</h1>
-        {season.tabellone_deadline && !isMercato && (
-          <p className="mt-1 text-sm text-neutral-500">
-            Deadline compilazione: {formatDate(season.tabellone_deadline)}
-          </p>
+    <div className={showForm ? 'pb-24' : ''}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Tabellone {season.name}</h1>
+          {activeDeadline && editable && (
+            <p className="mt-1 text-sm text-neutral-500">
+              {isMercato ? 'Modificabile fino al' : 'Compilazione/modifica entro il'}{' '}
+              {formatDate(activeDeadline)}
+            </p>
+          )}
+        </div>
+        {/* Tasto Modifica: solo in vista riepilogo, con tabellone salvato e finestra aperta */}
+        {!showForm && tabellone && editable && (
+          <button
+            onClick={startEditing}
+            className="shrink-0 rounded-lg border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+          >
+            Modifica
+          </button>
         )}
       </div>
 
       {/* Banner di stato */}
-      {isMercato && (
+      {isMercato && editable && (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           ⚠️ <strong>Finestra di mercato aperta</strong>
           {season.modification_deadline && <> fino al {formatDate(season.modification_deadline)}</>}.
@@ -219,7 +255,7 @@ export default function Tabellone() {
       {!editable && (
         <div className="mb-4 rounded-xl border bg-neutral-50 p-3 text-sm text-neutral-600">
           {tabellone
-            ? 'Compilazione chiusa. Di seguito le tue previsioni inserite.'
+            ? 'Compilazione chiusa: il tabellone non è più modificabile.'
             : 'Compilazione chiusa: non hai un tabellone per questa stagione.'}
         </div>
       )}
@@ -232,62 +268,36 @@ export default function Tabellone() {
         </div>
       )}
 
-      {/* Caso: niente da mostrare e niente da compilare */}
-      {!editable && !tabellone ? null : (
-        <div className="grid gap-4">
-          {SECTIONS.map((section) => (
-            <div key={section.title} className="rounded-xl border bg-white p-4">
-              <h2 className="mb-3 text-sm font-semibold text-neutral-700">{section.title}</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {section.fields.map((def) => {
-                  const breakdown = tabellone?.points_breakdown?.[def.key]
-                  const isChanged = isMercato && changedKeys.includes(def.key)
-                  return (
-                    <label key={def.key} className="flex flex-col gap-1 text-sm">
-                      <span className="flex items-center gap-1 text-neutral-600">
-                        {def.label}
-                        {isChanged && <span className="text-xs text-amber-600">• modificato</span>}
-                        {breakdown != null && (
-                          <span
-                            className={`ml-auto text-xs ${
-                              breakdown > 0 ? 'font-semibold text-brand-600' : 'text-neutral-400'
-                            }`}
-                          >
-                            {breakdown} pt
-                          </span>
-                        )}
-                      </span>
-                      <input
-                        type={def.type === 'number' ? 'number' : 'text'}
-                        inputMode={def.type === 'number' ? 'numeric' : undefined}
-                        disabled={!editable}
-                        value={form[def.key]}
-                        onChange={(e) => update(def.key, e.target.value)}
-                        className={`rounded-lg border px-3 py-2 disabled:bg-neutral-100 ${
-                          isChanged ? 'border-amber-400' : ''
-                        }`}
-                      />
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {showForm ? (
+        <TabelloneForm
+          form={form}
+          tabellone={tabellone}
+          isMercato={isMercato}
+          changedKeys={changedKeys}
+          onChange={update}
+        />
+      ) : tabellone ? (
+        <TabelloneSummary tabellone={tabellone} form={baseline ?? form} />
+      ) : null}
 
-      {/* Barra salvataggio sticky */}
-      {editable && (
+      {/* Barra salvataggio sticky — solo in modalità form */}
+      {showForm && (
         <div className="fixed inset-x-0 bottom-0 border-t bg-white p-3">
           <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4">
-            {mutation.isSuccess && !mutation.isPending && (
-              <span className="text-sm text-brand-600">Salvato ✓</span>
-            )}
             {errMsg && <span className="text-sm text-miss">{errMsg}</span>}
             {isMercato && changedKeys.length > 0 && (
               <span className="text-sm text-amber-700">
                 {changedKeys.length} modifica/e → -{changedKeys.length * MERCATO_PENALTY} pt
               </span>
+            )}
+            {tabellone && (
+              <button
+                onClick={cancelEditing}
+                disabled={mutation.isPending}
+                className="rounded-lg border px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-60"
+              >
+                Annulla
+              </button>
             )}
             <button
               onClick={onSave}
@@ -303,6 +313,107 @@ export default function Tabellone() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Form di compilazione/modifica ──────────────────────────────────────────────
+
+function TabelloneForm({
+  form,
+  tabellone,
+  isMercato,
+  changedKeys,
+  onChange,
+}: {
+  form: FormState
+  tabellone: TablePredictionOut | null
+  isMercato: boolean
+  changedKeys: TabelloneFieldKey[]
+  onChange: (key: TabelloneFieldKey, value: string) => void
+}) {
+  return (
+    <div className="grid gap-4">
+      {SECTIONS.map((section) => (
+        <div key={section.title} className="rounded-xl border bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-neutral-700">{section.title}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {section.fields.map((def) => {
+              const isChanged = isMercato && changedKeys.includes(def.key)
+              const breakdown = tabellone?.points_breakdown?.[def.key]
+              return (
+                <label key={def.key} className="flex flex-col gap-1 text-sm">
+                  <span className="flex items-center gap-1 text-neutral-600">
+                    {def.label}
+                    {isChanged && <span className="text-xs text-amber-600">• modificato</span>}
+                    {breakdown != null && (
+                      <span
+                        className={`ml-auto text-xs ${
+                          breakdown > 0 ? 'font-semibold text-brand-600' : 'text-neutral-400'
+                        }`}
+                      >
+                        {breakdown} pt
+                      </span>
+                    )}
+                  </span>
+                  <input
+                    type={def.type === 'number' ? 'number' : 'text'}
+                    inputMode={def.type === 'number' ? 'numeric' : undefined}
+                    value={form[def.key]}
+                    onChange={(e) => onChange(def.key, e.target.value)}
+                    className={`rounded-lg border px-3 py-2 ${isChanged ? 'border-amber-400' : ''}`}
+                  />
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Vista riepilogo (sola lettura) ──────────────────────────────────────────────
+
+function TabelloneSummary({
+  tabellone,
+  form,
+}: {
+  tabellone: TablePredictionOut
+  form: FormState
+}) {
+  return (
+    <div className="grid gap-4">
+      {SECTIONS.map((section) => (
+        <div key={section.title} className="overflow-hidden rounded-xl border bg-white">
+          <h2 className="border-b bg-neutral-50 px-4 py-2 text-sm font-semibold text-neutral-700">
+            {section.title}
+          </h2>
+          <dl className="divide-y">
+            {section.fields.map((def) => {
+              const value = form[def.key]?.trim()
+              const breakdown = tabellone.points_breakdown?.[def.key]
+              return (
+                <div key={def.key} className="flex items-center gap-3 px-4 py-2 text-sm">
+                  <dt className="w-1/2 text-neutral-500">{def.label}</dt>
+                  <dd className="flex-1 font-medium">
+                    {value ? value : <span className="text-neutral-300">—</span>}
+                  </dd>
+                  {breakdown != null && (
+                    <span
+                      className={`text-xs ${
+                        breakdown > 0 ? 'font-semibold text-brand-600' : 'text-neutral-400'
+                      }`}
+                    >
+                      {breakdown} pt
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </dl>
+        </div>
+      ))}
     </div>
   )
 }
