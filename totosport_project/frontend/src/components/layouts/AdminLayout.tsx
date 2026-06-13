@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 
 const items: NavItem[] = [
   { to: '/admin', label: 'Dashboard' },
+  { to: '/admin/season', label: 'Stagione' },
   { to: '/admin/rounds', label: 'Giornate' },
   { to: '/admin/tabellone', label: 'Tabellone' },
   { to: '/admin/leaderboard', label: 'Classifica' },

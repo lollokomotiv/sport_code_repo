@@ -9,7 +9,12 @@ from app.dependencies.auth import require_admin
 from app.models.season import Season
 from app.models.user import User
 from app.schemas.leaderboard import SeasonBonusResult
-from app.schemas.season import SeasonCreate, SeasonOut, SeasonStatusUpdate
+from app.schemas.season import (
+    SeasonCreate,
+    SeasonOut,
+    SeasonStatusUpdate,
+    SeasonUpdate,
+)
 from app.services.leaderboard import finalize_season
 from app.services.season import create_season, get_current_season, get_season, update_status
 
@@ -42,6 +47,23 @@ async def current(
     season = await get_current_season(db)
     if season is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nessuna stagione attiva")
+    return season
+
+
+@router.patch("/{season_id}", response_model=SeasonOut)
+async def update_deadlines(
+    season_id: uuid.UUID,
+    body: SeasonUpdate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> Season:
+    season = await get_season(season_id, db)
+    if season is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stagione non trovata")
+    fields = body.model_dump(exclude_unset=True)
+    for key, value in fields.items():
+        setattr(season, key, value)
+    await db.flush()
     return season
 
 

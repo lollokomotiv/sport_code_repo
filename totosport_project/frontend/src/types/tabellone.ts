@@ -51,5 +51,51 @@ export interface TablePredictionOut extends TabelloneFields {
 
 export type TabelloneInput = Partial<TabelloneFields>
 
+// Risultati reali della stagione (lato admin). Stessi nomi del tabellone, più
+// alcuni flag (playoffs_held / playout_held); i "goals/points" usano gli stessi
+// suffissi ma con chiavi senza "_guess".
+export interface SeasonOutcomeFields {
+  scudetto_team: string | null
+  scudetto_points: number | null
+  relegated_a_1: string | null
+  relegated_a_2: string | null
+  relegated_a_3: string | null
+  top_scorer_a: string | null
+  top_scorer_a_goals: number | null
+  promoted_b_direct_1: string | null
+  promoted_b_direct_2: string | null
+  promoted_b_first_points: number | null
+  playoff_b_1: string | null
+  playoff_b_2: string | null
+  playoff_b_3: string | null
+  playoff_b_4: string | null
+  playoff_b_5: string | null
+  playoff_b_6: string | null
+  promoted_b_playoff: string | null
+  playoffs_held: boolean | null
+  relegated_b_c_direct_1: string | null
+  relegated_b_c_direct_2: string | null
+  relegated_b_c_direct_3: string | null
+  playout_b_1: string | null
+  playout_b_2: string | null
+  relegated_b_c_playout: string | null
+  playout_held: boolean | null
+  top_scorer_b: string | null
+  top_scorer_b_goals: number | null
+  coppa_italia_winner: string | null
+  champions_winner: string | null
+  europa_winner: string | null
+  conference_winner: string | null
+}
+
+export interface SeasonOutcomeOut extends SeasonOutcomeFields {
+  id: string
+  season_id: string
+  created_at: string
+  updated_at: string
+}
+
+export type SeasonOutcomeInput = Partial<SeasonOutcomeFields>
+
 // Chiavi dei campi nell'ordine di compilazione, raggruppate per sezione.
 export type TabelloneFieldKey = keyof TabelloneFields

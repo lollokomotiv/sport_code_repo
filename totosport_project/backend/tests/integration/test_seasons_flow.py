@@ -52,3 +52,43 @@ async def test_current_season_requires_auth(client: AsyncClient):
 async def test_current_season_404_when_none(client: AsyncClient, player):
     r = await client.get("/seasons/current", headers=_auth(player))
     assert r.status_code == 404
+
+
+@pytest_asyncio.fixture
+async def admin(db_session) -> User:
+    u = User(
+        username="admin",
+        email="admin@example.com",
+        password_hash=hash_password("test1234"),
+        role=UserRole.admin,
+    )
+    db_session.add(u)
+    await db_session.commit()
+    return u
+
+
+async def test_admin_updates_season_deadlines(client: AsyncClient, db_session, admin):
+    s = Season(name="2025-26", status=SeasonStatus.setup)
+    db_session.add(s)
+    await db_session.commit()
+
+    r = await client.patch(
+        f"/admin/seasons/{s.id}",
+        headers=_auth(admin),
+        json={"tabellone_deadline": "2026-09-01T20:00:00Z"},
+    )
+    assert r.status_code == 200
+    assert r.json()["tabellone_deadline"].startswith("2026-09-01")
+
+
+async def test_player_cannot_update_season_deadlines(client: AsyncClient, db_session, player):
+    s = Season(name="2025-26", status=SeasonStatus.setup)
+    db_session.add(s)
+    await db_session.commit()
+
+    r = await client.patch(
+        f"/admin/seasons/{s.id}",
+        headers=_auth(player),
+        json={"tabellone_deadline": "2026-09-01T20:00:00Z"},
+    )
+    assert r.status_code == 403

@@ -26,3 +26,10 @@ class SeasonOut(BaseModel):
 
 class SeasonStatusUpdate(BaseModel):
     status: SeasonStatus
+
+
+class SeasonUpdate(BaseModel):
+    """Aggiornamento delle deadline del tabellone (solo i campi inviati)."""
+
+    tabellone_deadline: Optional[datetime] = None
+    modification_deadline: Optional[datetime] = None

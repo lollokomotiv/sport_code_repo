@@ -1,10 +1,14 @@
 import { createBrowserRouter } from 'react-router-dom'
 
-import ComingSoon from '@/components/ComingSoon'
 import AdminLayout from '@/components/layouts/AdminLayout'
 import PlayerLayout from '@/components/layouts/PlayerLayout'
 import ProtectedLayout from '@/components/layouts/ProtectedLayout'
 import AdminHome from '@/pages/admin/AdminHome'
+import AdminTabellone from '@/pages/admin/AdminTabellone'
+import Players from '@/pages/admin/Players'
+import AdminRoundDetail from '@/pages/admin/RoundDetail'
+import AdminRounds from '@/pages/admin/Rounds'
+import Season from '@/pages/admin/Season'
 import Login from '@/pages/Login'
 import Leaderboard from '@/pages/player/Leaderboard'
 import MyPredictions from '@/pages/player/MyPredictions'
@@ -36,10 +40,12 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminHome /> },
-          { path: 'rounds', element: <ComingSoon title="Giornate" /> },
-          { path: 'tabellone', element: <ComingSoon title="Tabellone" /> },
-          { path: 'leaderboard', element: <ComingSoon title="Classifica" /> },
-          { path: 'users', element: <ComingSoon title="Giocatori" /> },
+          { path: 'season', element: <Season /> },
+          { path: 'rounds', element: <AdminRounds /> },
+          { path: 'rounds/:id', element: <AdminRoundDetail /> },
+          { path: 'tabellone', element: <AdminTabellone /> },
+          { path: 'leaderboard', element: <Leaderboard /> },
+          { path: 'users', element: <Players /> },
         ],
       },
     ],
