@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, computed_field, field_validator
+from pydantic import BaseModel, field_validator
 
 from app.models.round import Competition
-from app.services.scoring import derive_sign
 
 
 # ─── Match prediction ─────────────────────────────────────────────────────────
@@ -13,13 +12,15 @@ from app.services.scoring import derive_sign
 
 class MatchPredictionCreate(BaseModel):
     match_id: uuid.UUID
-    predicted_home_goals: int
-    predicted_away_goals: int
+    predicted_sign: Literal["1", "X", "2"]
+    # Opzionali: si compilano solo sulle partite con requires_exact_score
+    predicted_home_goals: Optional[int] = None
+    predicted_away_goals: Optional[int] = None
 
     @field_validator("predicted_home_goals", "predicted_away_goals")
     @classmethod
-    def non_negative(cls, v: int) -> int:
-        if v < 0:
+    def non_negative(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 0:
             raise ValueError("I gol non possono essere negativi")
         return v
 
@@ -28,17 +29,13 @@ class MatchPredictionOut(BaseModel):
     id: uuid.UUID
     player_id: uuid.UUID
     match_id: uuid.UUID
-    predicted_home_goals: int
-    predicted_away_goals: int
+    predicted_sign: str
+    predicted_home_goals: Optional[int]
+    predicted_away_goals: Optional[int]
     points_earned: int
     submitted_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def derived_sign(self) -> str:
-        return derive_sign(self.predicted_home_goals, self.predicted_away_goals)
 
 
 # ─── Round (total goals) prediction ───────────────────────────────────────────

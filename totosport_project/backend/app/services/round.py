@@ -202,6 +202,7 @@ async def add_match(rnd: Round, data: dict, db: AsyncSession) -> Match:
         competition=competition,
         home_team=home_team,
         away_team=away_team,
+        requires_exact_score=bool(data.get("requires_exact_score", False)),
         kickoff=kickoff,
         api_fixture_id=api_fixture_id,
     )

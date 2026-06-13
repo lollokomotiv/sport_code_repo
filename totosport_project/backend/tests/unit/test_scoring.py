@@ -17,38 +17,55 @@ def test_derive_sign():
     assert derive_sign(0, 2) == "2"
 
 
-# ─── score_match (casi acceptance) ──────────────────────────────────────────────
+# ─── score_match: partite SOLO-SEGNO (requires_exact=False) ─────────────────────
+
+
+def test_sign_only_correct():
+    # segno scelto giusto, nessun risultato esatto richiesto
+    assert score_match("1", None, None, 2, 1, False) == (1, 0)
+
+
+def test_sign_only_wrong():
+    assert score_match("2", None, None, 2, 1, False) == (0, 0)
+
+
+def test_exact_goals_ignored_when_not_required():
+    # Anche se i goal coincidono, senza requires_exact niente bonus (solo il segno)
+    assert score_match("1", 2, 1, 2, 1, False) == (1, 0)
+
+
+# ─── score_match: partite con RISULTATO ESATTO (requires_exact=True) ─────────────
 
 
 def test_score_match_home_exact():
-    assert score_match(2, 1, 2, 1) == (1, 5)
+    assert score_match("1", 2, 1, 2, 1, True) == (1, 5)
 
 
 def test_score_match_draw_exact():
-    assert score_match(1, 1, 1, 1) == (1, 7)
+    assert score_match("X", 1, 1, 1, 1, True) == (1, 7)
 
 
 def test_score_match_away_exact():
-    assert score_match(0, 2, 0, 2) == (1, 9)
+    assert score_match("2", 0, 2, 0, 2, True) == (1, 9)
 
 
 def test_score_match_high_scoring_draw():
     # 3-3: pareggio esatto con 6 gol → 7 + 2
-    assert score_match(3, 3, 3, 3) == (1, 9)
+    assert score_match("X", 3, 3, 3, 3, True) == (1, 9)
 
 
 def test_score_match_high_scoring_home():
     # 3-2 esatto (5 gol) → 5 + 2
-    assert score_match(3, 2, 3, 2) == (1, 7)
+    assert score_match("1", 3, 2, 3, 2, True) == (1, 7)
 
 
-def test_score_match_sign_only():
+def test_score_match_sign_right_exact_wrong():
     # segno giusto (casa), risultato sbagliato
-    assert score_match(2, 1, 1, 0) == (1, 0)
+    assert score_match("1", 2, 1, 1, 0, True) == (1, 0)
 
 
 def test_score_match_wrong_sign():
-    assert score_match(0, 1, 1, 0) == (0, 0)
+    assert score_match("2", 0, 1, 1, 0, True) == (0, 0)
 
 
 # ─── score_total_goals ──────────────────────────────────────────────────────────

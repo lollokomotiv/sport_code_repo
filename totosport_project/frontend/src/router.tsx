@@ -6,7 +6,9 @@ import PlayerLayout from '@/components/layouts/PlayerLayout'
 import ProtectedLayout from '@/components/layouts/ProtectedLayout'
 import AdminHome from '@/pages/admin/AdminHome'
 import Login from '@/pages/Login'
-import PlayerHome from '@/pages/player/PlayerHome'
+import Leaderboard from '@/pages/player/Leaderboard'
+import RoundDetail from '@/pages/player/RoundDetail'
+import RoundsList from '@/pages/player/RoundsList'
 import RoleHome from '@/pages/RoleHome'
 
 export const router = createBrowserRouter([
@@ -20,9 +22,10 @@ export const router = createBrowserRouter([
         path: 'player',
         element: <PlayerLayout />,
         children: [
-          { index: true, element: <PlayerHome /> },
+          { index: true, element: <RoundsList /> },
+          { path: 'rounds/:id', element: <RoundDetail /> },
+          { path: 'leaderboard', element: <Leaderboard /> },
           { path: 'predictions', element: <ComingSoon title="Le mie previsioni" /> },
-          { path: 'leaderboard', element: <ComingSoon title="Classifica" /> },
           { path: 'tabellone', element: <ComingSoon title="Tabellone" /> },
         ],
       },

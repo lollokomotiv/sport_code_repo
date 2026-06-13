@@ -41,20 +41,28 @@ def derive_sign(home: int, away: int) -> Literal["1", "X", "2"]:
 
 
 def score_match(
-    pred_home: int, pred_away: int, actual_home: int, actual_away: int
+    predicted_sign: str,
+    pred_home: int | None,
+    pred_away: int | None,
+    actual_home: int,
+    actual_away: int,
+    requires_exact: bool,
 ) -> tuple[int, int]:
     """
     Restituisce (sign_points, exact_points).
-    - sign_points: 1 se il segno è giusto, 0 altrimenti.
-    - exact_points: 5/7/9 (+2 se 5+ gol totali) se il risultato esatto è giusto, 0 altrimenti.
+    - sign_points: 1 se il segno SCELTO dal giocatore è giusto, 0 altrimenti.
+    - exact_points: solo sulle partite con `requires_exact=True` e se il risultato esatto
+      è stato pronosticato e indovinato → 5/7/9 (+2 se 5+ gol totali); 0 altrimenti.
     Totale partita = sign_points + exact_points.
     """
-    sign_pts = SIGN_POINT if derive_sign(pred_home, pred_away) == derive_sign(actual_home, actual_away) else 0
+    actual_sign = derive_sign(actual_home, actual_away)
+    sign_pts = SIGN_POINT if predicted_sign == actual_sign else 0
     exact_pts = 0
-    if pred_home == actual_home and pred_away == actual_away:
-        exact_pts = EXACT_BONUS[derive_sign(actual_home, actual_away)]
-        if actual_home + actual_away >= HIGH_SCORING_THRESHOLD:
-            exact_pts += HIGH_SCORING_BONUS
+    if requires_exact and pred_home is not None and pred_away is not None:
+        if pred_home == actual_home and pred_away == actual_away:
+            exact_pts = EXACT_BONUS[actual_sign]
+            if actual_home + actual_away >= HIGH_SCORING_THRESHOLD:
+                exact_pts += HIGH_SCORING_BONUS
     return sign_pts, exact_pts
 
 
@@ -97,10 +105,12 @@ async def score_match_and_persist(match_id: uuid.UUID, db: AsyncSession) -> None
     )
     for pred in result.scalars().all():
         sign_pts, exact_pts = score_match(
+            pred.predicted_sign,
             pred.predicted_home_goals,
             pred.predicted_away_goals,
             match.actual_home_goals,
             match.actual_away_goals,
+            match.requires_exact_score,
         )
         pred.points_earned = sign_pts + exact_pts
     await db.flush()
@@ -137,8 +147,10 @@ async def finalize_round(round_id: uuid.UUID, db: AsyncSession) -> list[RoundSco
             if m.actual_home_goals is None or m.actual_away_goals is None:
                 continue
             s, e = score_match(
+                p.predicted_sign,
                 p.predicted_home_goals, p.predicted_away_goals,
                 m.actual_home_goals, m.actual_away_goals,
+                m.requires_exact_score,
             )
             sign_by_player[p.player_id] += s
             exact_by_player[p.player_id] += e

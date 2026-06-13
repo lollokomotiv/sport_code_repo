@@ -73,8 +73,14 @@ async def submit_match_prediction(
     if pred is None:
         pred = MatchPrediction(player_id=player_id, match_id=match.id)
         db.add(pred)
-    pred.predicted_home_goals = data["predicted_home_goals"]
-    pred.predicted_away_goals = data["predicted_away_goals"]
+    pred.predicted_sign = data["predicted_sign"]
+    # Il risultato esatto conta solo sulle partite che lo richiedono; altrove lo ignoriamo
+    if match.requires_exact_score:
+        pred.predicted_home_goals = data.get("predicted_home_goals")
+        pred.predicted_away_goals = data.get("predicted_away_goals")
+    else:
+        pred.predicted_home_goals = None
+        pred.predicted_away_goals = None
     pred.submitted_at = _now()
     await db.flush()
     return pred

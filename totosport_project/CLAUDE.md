@@ -141,14 +141,23 @@ Usata solo per recuperare fixture (squadre, orari, giornate). I risultati finali
 
 `ARCHITECTURE.md` è stato scritto prima di finalizzare il REGOLAMENTO. Queste sezioni sono **superate**:
 
-### 6.1 Niente `prediction_type` per partita
+### 6.1 Segno scelto su ogni partita; risultato esatto solo su alcune
 
-`ARCHITECTURE.md` descrive un campo `prediction_type = sign | exact_score` sulla tabella `Match`. **Non esiste più.**
+> ⚠️ **Aggiornato in Fase 9 su indicazione del proprietario del gioco** — supera sia
+> `ARCHITECTURE.md` sia la versione precedente di questa stessa sezione.
 
-Il REGOLAMENTO dice che ogni giocatore fa sempre una previsione di **risultato esatto** per ogni partita. Il segno (1/X/2) è **derivato automaticamente** dal risultato esatto inserito. Non c'è mai una previsione "solo segno" separata.
+Regola corretta:
+- Su **ogni** partita il giocatore **sceglie il segno** (1/X/2). Il segno **NON è derivato**:
+  è una scelta esplicita (campo `predicted_sign` su `MatchPrediction`, menù a tendina nel form).
+- Solo sulle **3-4 partite scelte dall'admin per giornata** si pronostica **anche il risultato
+  esatto** (campo `Match.requires_exact_score = True`). Su queste si guadagna il bonus esatto;
+  sulle altre il massimo è 1 pt (solo segno).
+
+Quindi un flag per-partita **esiste** (`requires_exact_score`), reintrodotto rispetto alla
+precedente nota "niente prediction_type". `derive_sign` resta in uso solo per calcolare il
+segno del **risultato reale** (per confrontarlo col segno scelto):
 
 ```python
-# Corretto
 def derive_sign(home_goals: int, away_goals: int) -> str:
     if home_goals > away_goals: return "1"
     if home_goals == away_goals: return "X"
@@ -168,9 +177,12 @@ Risultato esatto — trasferta: 10 pt totali  (1 segno + 9 bonus)
 Bonus 5+ gol (solo se esatto): +2 pt extra
 ```
 
-### 6.3 Schema `Prediction` va aggiornato
+### 6.3 Schema `MatchPrediction` (aggiornato in Fase 9)
 
-Il vecchio schema `Prediction` ha `predicted_sign` come campo esplicito. **Non serve**: si deriva da `predicted_home_goals` e `predicted_away_goals`. Rimuovilo per evitare inconsistenze.
+`MatchPrediction` ha `predicted_sign` come campo **esplicito e obbligatorio** (scelto dal
+giocatore). `predicted_home_goals`/`predicted_away_goals` sono **opzionali** e si compilano
+solo per le partite con `requires_exact_score = True`. (Questo supera la precedente nota che
+diceva di rimuovere `predicted_sign`: era basata sull'assunzione errata del "solo risultato esatto".)
 
 ### 6.4 Mancano le entità del Tabellone
 

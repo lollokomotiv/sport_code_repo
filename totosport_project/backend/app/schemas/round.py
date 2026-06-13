@@ -16,6 +16,7 @@ class MatchCreate(BaseModel):
     home_team: Optional[str] = None
     away_team: Optional[str] = None
     competition: Optional[Competition] = None  # obbligatoria per inserimento manuale
+    requires_exact_score: bool = False  # True → si pronostica anche il risultato esatto
     kickoff: Optional[datetime] = None
     staged_fixture_id: Optional[uuid.UUID] = None
 
@@ -31,6 +32,7 @@ class MatchOut(BaseModel):
     competition: Competition
     home_team: str
     away_team: str
+    requires_exact_score: bool
     kickoff: Optional[datetime]
     actual_home_goals: Optional[int]
     actual_away_goals: Optional[int]
