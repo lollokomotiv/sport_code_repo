@@ -40,7 +40,7 @@ export default function AdminPlayers() {
           onClick={() => setShow((s) => !s)}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
-          {show ? 'Annulla' : 'Invita giocatore'}
+          {show ? 'Annulla' : 'Crea giocatore'}
         </button>
       </div>
 
@@ -73,6 +73,10 @@ export default function AdminPlayers() {
               />
             </label>
           </div>
+          <p className="mt-2 text-xs text-neutral-500">
+            L'account viene creato subito ma non viene inviata alcuna mail: comunica tu username e
+            password iniziale al giocatore.
+          </p>
           {createMut.isError && (
             <p className="mt-2 text-sm text-miss">{errorMessage(createMut.error)}</p>
           )}
