@@ -37,9 +37,9 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 | 6 — Leaderboard & Bonus | ✅ Completata |
 | 7 — API-Football | ⬜ Non iniziata |
 | 8 — Frontend Foundation | ✅ Completata |
-| 9 — Frontend Player | ⬜ Non iniziata |
-| 10 — Frontend Admin | ⬜ Non iniziata |
-| 11 — Deployment | ⬜ Non iniziata |
+| 9 — Frontend Player | ✅ Completata |
+| 10 — Frontend Admin | ✅ Completata |
+| 11 — Deployment | ⬜ Non iniziata (PWA installabile predisposta) |
 
 ---
 
