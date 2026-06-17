@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { NavLink, useNavigate } from 'react-router-dom'
 
 import { useAuthStore } from '@/store/authStore'
@@ -9,11 +10,13 @@ export interface NavItem {
 
 export default function Navbar({ items }: { items: NavItem[] }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
   function handleLogout() {
     logout()
+    queryClient.clear() // rimuove i dati in cache del giocatore che esce
     navigate('/login', { replace: true })
   }
 

@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 
@@ -6,6 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 
 export default function Login() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
   const setTokens = useAuthStore((s) => s.setTokens)
   const setUser = useAuthStore((s) => s.setUser)
@@ -28,6 +30,8 @@ export default function Login() {
       const tokens = await login(username, password)
       setTokens(tokens.access_token, tokens.refresh_token)
       const me = await getMe()
+      // Svuota la cache: evita di mostrare al nuovo utente dati del precedente
+      queryClient.clear()
       setUser(me)
       navigate(me.role === 'admin' ? '/admin' : '/player', { replace: true })
     } catch {

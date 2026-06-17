@@ -27,7 +27,9 @@ export default function Leaderboard() {
               <th className="px-3 py-2">Giocatore</th>
               <th className="px-3 py-2 text-right">Totale</th>
               <th className="px-3 py-2 text-right">Segni</th>
-              <th className="px-3 py-2 text-right">Pieni+Gol</th>
+              <th className="px-3 py-2 text-right">Pieni</th>
+              <th className="px-3 py-2 text-right">Gol</th>
+              <th className="px-3 py-2 text-right">Weekend</th>
               <th className="px-3 py-2 text-right">Tabellone</th>
             </tr>
           </thead>
@@ -41,9 +43,9 @@ export default function Leaderboard() {
                 <td className="px-3 py-2">{e.username}</td>
                 <td className="px-3 py-2 text-right font-semibold">{e.total_points}</td>
                 <td className="px-3 py-2 text-right text-neutral-600">{e.sign_points}</td>
-                <td className="px-3 py-2 text-right text-neutral-600">
-                  {e.exact_points + e.total_goals_points}
-                </td>
+                <td className="px-3 py-2 text-right text-neutral-600">{e.exact_points}</td>
+                <td className="px-3 py-2 text-right text-neutral-600">{e.total_goals_points}</td>
+                <td className="px-3 py-2 text-right text-neutral-600">{e.weekend_bonus_total}</td>
                 <td className="px-3 py-2 text-right text-neutral-600">{e.tabellone_points}</td>
               </tr>
             ))}
