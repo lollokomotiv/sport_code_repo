@@ -11,7 +11,7 @@ chiarito alcune regole ambigue del REGOLAMENTO.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.season import Season, SeasonStatus
@@ -177,13 +177,24 @@ async def submit_tabellone(
 # ─── Modifica post-mercato (stato mercato, con penalità) ──────────────────────
 
 
+def _to_str(value: object) -> str | None:
+    return str(value) if value is not None else None
+
+
 async def modify_tabellone(
     player_id: uuid.UUID, season: Season, changes: dict, db: AsyncSession
 ) -> tuple[TablePrediction, list[TablePredictionModification]]:
     """
-    Applica le modifiche post-mercato (REGOLAMENTO §7). Per ogni VOCE realmente
-    cambiata: registra una riga in TablePredictionModification e applica -5pt.
-    I campi invariati non vengono addebitati. Ritorna (tabellone, modifiche fatte).
+    Applica le modifiche post-mercato (REGOLAMENTO §7).
+
+    La penalità è calcolata rispetto al **tabellone originale** (snapshot catturato
+    alla prima modifica in mercato), NON rispetto al valore salvato in precedenza:
+    - una voce che differisce dall'originale costa -5 pt, una sola volta;
+    - rimodificare la stessa voce non aggiunge un'altra penalità;
+    - tornare al valore originale **azzera** la penalità di quella voce.
+
+    Il log delle modifiche viene riallineato allo stato corrente (una riga per
+    ogni voce attualmente diversa dall'originale). Ritorna (tabellone, modifiche).
     """
     if season.status != SeasonStatus.mercato:
         raise TabelloneNotInMercato("Le modifiche sono ammesse solo a mercato aperto")
@@ -194,31 +205,48 @@ async def modify_tabellone(
     if pred is None:
         raise TabelloneNotFound("Nessun tabellone da modificare per questa stagione")
 
-    # Raggruppa i campi effettivamente cambiati per voce
-    changed_by_voice: dict[str, list[tuple[str, object, object]]] = {}
+    all_fields = list(FIELD_TO_VOICE.keys())
+
+    # Snapshot dell'originale alla PRIMA modifica (qui pred = tabellone compilato,
+    # nessuna modifica di mercato ancora applicata).
+    if pred.mercato_baseline is None:
+        pred.mercato_baseline = {f: getattr(pred, f) for f in all_fields}
+    baseline = pred.mercato_baseline
+
+    # Applica i campi in arrivo (solo quelli modificabili noti).
     for field, new_value in changes.items():
         if field not in FIELD_TO_VOICE:
-            continue  # ignora campi non modificabili / sconosciuti
-        old_value = getattr(pred, field)
-        if old_value == new_value:
-            continue  # invariato → nessun addebito (REGOLAMENTO §7, punto 1)
-        voice = FIELD_TO_VOICE[field]
-        changed_by_voice.setdefault(voice, []).append((field, old_value, new_value))
+            continue
         setattr(pred, field, new_value)
 
+    # Voci attualmente diverse dall'originale (una voce = previsione + bonus).
+    modified_voices = [
+        voice
+        for voice, fields in VOICE_FIELDS.items()
+        if any(getattr(pred, f) != baseline.get(f) for f in fields)
+    ]
+
+    # Riallinea il log: una riga per voce modificata rispetto all'originale.
+    await db.execute(
+        delete(TablePredictionModification).where(
+            TablePredictionModification.prediction_id == pred.id
+        )
+    )
     modifications: list[TablePredictionModification] = []
-    for voice, field_changes in changed_by_voice.items():
-        primary_field, old_value, new_value = field_changes[0]
+    for voice in modified_voices:
+        primary = VOICE_FIELDS[voice][0]
         mod = TablePredictionModification(
             prediction_id=pred.id,
             field_name=voice,
-            old_value=str(old_value) if old_value is not None else None,
-            new_value=str(new_value) if new_value is not None else None,
+            old_value=_to_str(baseline.get(primary)),
+            new_value=_to_str(getattr(pred, primary)),
             penalty_points=PENALTY_PER_MODIFICATION,
         )
         db.add(mod)
         modifications.append(mod)
-        pred.mercato_penalty += PENALTY_PER_MODIFICATION
+
+    # Penalità totale = -5 per ciascuna voce diversa dall'originale.
+    pred.mercato_penalty = PENALTY_PER_MODIFICATION * len(modified_voices)
 
     await db.flush()
     return pred, modifications

@@ -33,6 +33,11 @@ class TablePrediction(Base):
     # Penalità immediata cumulata dalle modifiche post-mercato (REGOLAMENTO §7.2)
     mercato_penalty: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    # Snapshot del tabellone originale (campo → valore) catturato alla PRIMA
+    # modifica in mercato. Serve a calcolare la penalità rispetto all'originale:
+    # rimodificare la stessa voce resta -5; tornare al valore originale azzera.
+    mercato_baseline: Mapped[Optional[dict]] = mapped_column(JSONB)
+
     # ─── Serie A ────────────────────────────────────────────────────────────────
     scudetto_team: Mapped[Optional[str]] = mapped_column(String(80))
     scudetto_points_guess: Mapped[Optional[int]] = mapped_column(Integer)

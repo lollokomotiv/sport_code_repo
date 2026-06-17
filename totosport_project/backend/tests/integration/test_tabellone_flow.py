@@ -131,6 +131,37 @@ async def test_modify_same_value_not_charged(client: AsyncClient, player, season
     assert r.json()["mercato_penalty"] == 0
 
 
+async def test_remodifying_same_voice_charged_once(client: AsyncClient, player, season, admin):
+    """Modificare due volte la stessa voce (in salvataggi separati) resta -5."""
+    await client.post("/tabellone", headers=_auth(player), json={"scudetto_team": "Inter"})
+    await client.patch(
+        f"/admin/seasons/{season.id}/status", headers=_auth(admin), json={"status": "mercato"}
+    )
+    r1 = await client.patch("/tabellone/me", headers=_auth(player), json={"scudetto_team": "Milan"})
+    assert r1.json()["mercato_penalty"] == -5
+    # Seconda modifica della STESSA voce → ancora -5, non -10
+    r2 = await client.patch("/tabellone/me", headers=_auth(player), json={"scudetto_team": "Juventus"})
+    assert r2.json()["mercato_penalty"] == -5
+
+
+async def test_reverting_to_original_resets_penalty(
+    client: AsyncClient, player, season, admin, db_session
+):
+    """Tornare al valore originale azzera la penalità e rimuove la modifica."""
+    await client.post("/tabellone", headers=_auth(player), json={"scudetto_team": "Inter"})
+    await client.patch(
+        f"/admin/seasons/{season.id}/status", headers=_auth(admin), json={"status": "mercato"}
+    )
+    r1 = await client.patch("/tabellone/me", headers=_auth(player), json={"scudetto_team": "Milan"})
+    assert r1.json()["mercato_penalty"] == -5
+    # Rimette l'originale → penalità azzerata
+    r2 = await client.patch("/tabellone/me", headers=_auth(player), json={"scudetto_team": "Inter"})
+    assert r2.json()["mercato_penalty"] == 0
+
+    mods = await db_session.execute(select(TablePredictionModification.field_name))
+    assert list(mods.scalars().all()) == []
+
+
 # ─── 5 & 6: outcome + scoring con cap ─────────────────────────────────────────────
 
 

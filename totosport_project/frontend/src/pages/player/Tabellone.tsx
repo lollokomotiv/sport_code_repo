@@ -203,10 +203,11 @@ export default function Tabellone() {
   function onSave() {
     if (isMercato) {
       if (changedKeys.length === 0) return
-      const penalty = changedKeys.length * MERCATO_PENALTY
       const ok = window.confirm(
-        `Stai modificando ${changedKeys.length} voce/i del tabellone.\n` +
-          `Penalità immediata: -${penalty} pt e il guadagno massimo su queste voci viene dimezzato.\n\nConfermi?`,
+        'Stai salvando modifiche al tabellone.\n\n' +
+          `Ogni voce diversa dal tabellone originale costa -${MERCATO_PENALTY} pt (una sola volta) ` +
+          'e dimezza il guadagno massimo su quella voce. Riportare una voce al valore originale ' +
+          'annulla la sua penalità.\n\nConfermi?',
       )
       if (!ok) return
     }
@@ -287,7 +288,7 @@ export default function Tabellone() {
             {errMsg && <span className="text-sm text-miss">{errMsg}</span>}
             {isMercato && changedKeys.length > 0 && (
               <span className="text-sm text-amber-700">
-                {changedKeys.length} modifica/e → -{changedKeys.length * MERCATO_PENALTY} pt
+                {changedKeys.length} voce/i da salvare · penalità ricalcolata sull'originale
               </span>
             )}
             {tabellone && (
