@@ -12,6 +12,7 @@ from app.schemas.tabellone import (
 )
 from app.services.season import get_current_season
 from app.services.tabellone import (
+    TabelloneAlreadyCompiled,
     TabelloneNotFound,
     TabelloneNotInMercato,
     TabelloneWindowClosed,
@@ -49,6 +50,8 @@ async def submit(
         )
     except TabelloneWindowClosed as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
+    except TabelloneAlreadyCompiled as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e))
     return _to_out(pred, season)
 
 

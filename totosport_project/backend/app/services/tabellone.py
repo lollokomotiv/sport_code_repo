@@ -20,6 +20,7 @@ from app.models.table_modification import TablePredictionModification
 from app.models.table_prediction import TablePrediction
 
 PENALTY_PER_MODIFICATION = -5
+LATE_COMPILE_PENALTY = -30  # una tantum per chi compila il tabellone in ritardo (mercato)
 
 # ─── Costanti punti (REGOLAMENTO §2) ──────────────────────────────────────────
 PTS_SCUDETTO = 25
@@ -95,6 +96,10 @@ class TabelloneNotFound(TabelloneError):
     """Il giocatore non ha ancora un tabellone per questa stagione."""
 
 
+class TabelloneAlreadyCompiled(TabelloneError):
+    """In mercato esiste già un tabellone: va usata la modifica, non la compilazione."""
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -152,23 +157,48 @@ async def submit_tabellone(
     player_id: uuid.UUID, season: Season, data: dict, db: AsyncSession
 ) -> TablePrediction:
     """
-    Crea o sovrascrive il tabellone del giocatore. Ammesso solo se la stagione è
-    in stato 'setup' o 'active' e la deadline di compilazione non è passata.
-    `data` contiene solo i campi forniti (model_dump(exclude_unset=True)).
-    """
-    if season.status not in (SeasonStatus.setup, SeasonStatus.active):
-        raise TabelloneWindowClosed("La stagione non accetta compilazioni del tabellone")
-    if season.tabellone_deadline is not None and _now() > season.tabellone_deadline:
-        raise TabelloneWindowClosed("Deadline di compilazione del tabellone superata")
+    Compila il tabellone del giocatore (`data` = solo i campi forniti).
 
+    - In `setup`/`active` (entro la deadline): compilazione/sovrascrittura normale,
+      nessuna penalità.
+    - In `mercato`: ammessa solo la **prima** compilazione (chi non l'ha compilato
+      in tempo), con penalità una tantum di -30. Se un tabellone esiste già, va
+      usata la modifica (PATCH), non la compilazione.
+    """
     pred = await get_tabellone(player_id, season.id, db)
-    if pred is None:
+
+    if season.status in (SeasonStatus.setup, SeasonStatus.active):
+        if season.tabellone_deadline is not None and _now() > season.tabellone_deadline:
+            raise TabelloneWindowClosed("Deadline di compilazione del tabellone superata")
+        if pred is None:
+            pred = TablePrediction(player_id=player_id, season_id=season.id)
+            db.add(pred)
+        for field, value in data.items():
+            setattr(pred, field, value)
+        pred.submitted_at = _now()
+
+    elif season.status == SeasonStatus.mercato:
+        if season.modification_deadline is not None and _now() > season.modification_deadline:
+            raise TabelloneWindowClosed("Deadline del mercato superata")
+        if pred is not None:
+            raise TabelloneAlreadyCompiled(
+                "Tabellone già compilato: usa la modifica, non una nuova compilazione"
+            )
+        # Compilazione tardiva: crea il tabellone con penalità fissa -30.
         pred = TablePrediction(player_id=player_id, season_id=season.id)
         db.add(pred)
+        for field, value in data.items():
+            setattr(pred, field, value)
+        pred.submitted_at = _now()
+        pred.late_compile_penalty = LATE_COMPILE_PENALTY
+        pred.mercato_penalty = LATE_COMPILE_PENALTY
+        # Baseline = valori appena compilati: eventuali modifiche successive in
+        # mercato partiranno da qui (e costeranno -5 a voce, oltre al -30).
+        await db.flush()
+        pred.mercato_baseline = {f: getattr(pred, f) for f in FIELD_TO_VOICE}
 
-    for field, value in data.items():
-        setattr(pred, field, value)
-    pred.submitted_at = _now()
+    else:
+        raise TabelloneWindowClosed("La stagione non accetta compilazioni del tabellone")
 
     await db.flush()
     return pred
@@ -245,8 +275,11 @@ async def modify_tabellone(
         db.add(mod)
         modifications.append(mod)
 
-    # Penalità totale = -5 per ciascuna voce diversa dall'originale.
-    pred.mercato_penalty = PENALTY_PER_MODIFICATION * len(modified_voices)
+    # Penalità totale = penalità di compilazione tardiva (se presente) +
+    # -5 per ciascuna voce diversa dall'originale.
+    pred.mercato_penalty = pred.late_compile_penalty + PENALTY_PER_MODIFICATION * len(
+        modified_voices
+    )
 
     await db.flush()
     return pred, modifications

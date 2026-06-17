@@ -33,6 +33,12 @@ class TablePrediction(Base):
     # Penalità immediata cumulata dalle modifiche post-mercato (REGOLAMENTO §7.2)
     mercato_penalty: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    # Penalità una tantum per chi compila il tabellone in ritardo (durante il
+    # mercato, non avendolo compilato entro la deadline). Sommata in mercato_penalty.
+    late_compile_penalty: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0"), default=0
+    )
+
     # Snapshot del tabellone originale (campo → valore) catturato alla PRIMA
     # modifica in mercato. Serve a calcolare la penalità rispetto all'originale:
     # rimodificare la stessa voce resta -5; tornare al valore originale azzera.

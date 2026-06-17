@@ -73,6 +73,7 @@ const SECTIONS: Section[] = [
 const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields)
 const NUMBER_KEYS = new Set(ALL_FIELDS.filter((f) => f.type === 'number').map((f) => f.key))
 const MERCATO_PENALTY = 5
+const LATE_COMPILE_PENALTY = 30
 
 type FormState = Record<TabelloneFieldKey, string>
 
@@ -155,8 +156,9 @@ export default function Tabellone() {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (isMercato) {
-        // Modifica post-mercato: invia solo i campi cambiati.
+      // Modifica (PATCH) solo se esiste già un tabellone in mercato; altrimenti
+      // compilazione (POST): normale in setup/active, tardiva (-30) in mercato.
+      if (isMercato && tabellone) {
         return modifyTabellone(toPayload(form, changedKeys))
       }
       return submitTabellone(toPayload(form))
@@ -201,7 +203,14 @@ export default function Tabellone() {
   }
 
   function onSave() {
-    if (isMercato) {
+    if (isMercato && !tabellone) {
+      // Compilazione tardiva: penalità fissa una tantum.
+      const ok = window.confirm(
+        'Stai compilando il tabellone in ritardo (a mercato aperto).\n\n' +
+          `Questo comporta una penalità una tantum di -${LATE_COMPILE_PENALTY} pt.\n\nConfermi?`,
+      )
+      if (!ok) return
+    } else if (isMercato) {
       if (changedKeys.length === 0) return
       const ok = window.confirm(
         'Stai salvando modifiche al tabellone.\n\n' +
@@ -243,14 +252,23 @@ export default function Tabellone() {
         )}
       </div>
 
-      {/* Banner di stato */}
-      {isMercato && editable && (
+      {/* Banner di stato — modifica di un tabellone esistente */}
+      {isMercato && editable && tabellone && (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           ⚠️ <strong>Finestra di mercato aperta</strong>
           {season.modification_deadline && <> fino al {formatDate(season.modification_deadline)}</>}.
           Ogni voce modificata costa <strong>-{MERCATO_PENALTY} pt</strong> immediati e dimezza il
           guadagno massimo su quella voce. Penalità già accumulata:{' '}
-          <strong>{tabellone?.mercato_penalty ?? 0} pt</strong>.
+          <strong>{tabellone.mercato_penalty ?? 0} pt</strong>.
+        </div>
+      )}
+      {/* Banner di stato — compilazione tardiva (nessun tabellone ancora) */}
+      {isMercato && editable && !tabellone && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          ⚠️ <strong>Compilazione tardiva</strong>: non hai compilato il tabellone entro la
+          deadline. Puoi farlo ora
+          {season.modification_deadline && <> (fino al {formatDate(season.modification_deadline)})</>}
+          , ma comporta una <strong>penalità una tantum di -{LATE_COMPILE_PENALTY} pt</strong>.
         </div>
       )}
       {!editable && (
@@ -286,9 +304,14 @@ export default function Tabellone() {
         <div className="fixed inset-x-0 bottom-0 border-t bg-white p-3">
           <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4">
             {errMsg && <span className="text-sm text-miss">{errMsg}</span>}
-            {isMercato && changedKeys.length > 0 && (
+            {isMercato && tabellone && changedKeys.length > 0 && (
               <span className="text-sm text-amber-700">
                 {changedKeys.length} voce/i da salvare · penalità ricalcolata sull'originale
+              </span>
+            )}
+            {isMercato && !tabellone && (
+              <span className="text-sm text-amber-700">
+                Compilazione tardiva · -{LATE_COMPILE_PENALTY} pt una tantum
               </span>
             )}
             {tabellone && (
@@ -302,12 +325,12 @@ export default function Tabellone() {
             )}
             <button
               onClick={onSave}
-              disabled={mutation.isPending || (isMercato && changedKeys.length === 0)}
+              disabled={mutation.isPending || (isMercato && !!tabellone && changedKeys.length === 0)}
               className="rounded-lg bg-brand-600 px-6 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-60"
             >
               {mutation.isPending
                 ? 'Salvataggio…'
-                : isMercato
+                : isMercato && tabellone
                   ? 'Salva modifiche'
                   : 'Salva tabellone'}
             </button>

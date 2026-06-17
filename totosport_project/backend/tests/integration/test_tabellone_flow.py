@@ -162,6 +162,48 @@ async def test_reverting_to_original_resets_penalty(
     assert list(mods.scalars().all()) == []
 
 
+# ─── Compilazione tardiva (mercato, nessun tabellone) ─────────────────────────────
+
+
+async def test_late_compile_in_mercato_applies_flat_penalty(client: AsyncClient, player, season, admin):
+    # Il giocatore NON compila in setup; l'admin apre il mercato
+    await client.patch(
+        f"/admin/seasons/{season.id}/status", headers=_auth(admin), json={"status": "mercato"}
+    )
+    # Compila in ritardo → penalità fissa -30
+    r = await client.post(
+        "/tabellone",
+        headers=_auth(player),
+        json={"scudetto_team": "Inter", "champions_winner": "Real Madrid"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["scudetto_team"] == "Inter"
+    assert body["mercato_penalty"] == -30
+    assert body["is_modifiable"] is True
+
+
+async def test_late_compile_then_modify_adds_voice_penalty(client: AsyncClient, player, season, admin):
+    await client.patch(
+        f"/admin/seasons/{season.id}/status", headers=_auth(admin), json={"status": "mercato"}
+    )
+    await client.post("/tabellone", headers=_auth(player), json={"scudetto_team": "Inter"})  # -30
+    # Una modifica successiva di una voce aggiunge -5 → -35
+    r = await client.patch("/tabellone/me", headers=_auth(player), json={"scudetto_team": "Milan"})
+    assert r.json()["mercato_penalty"] == -35
+
+
+async def test_submit_in_mercato_when_already_compiled_conflicts(client: AsyncClient, player, season, admin):
+    # Compila in tempo (setup) → nessuna penalità
+    await client.post("/tabellone", headers=_auth(player), json={"scudetto_team": "Inter"})
+    await client.patch(
+        f"/admin/seasons/{season.id}/status", headers=_auth(admin), json={"status": "mercato"}
+    )
+    # Ricompilare (POST) con tabellone già esistente in mercato → 409 (va usata la modifica)
+    r = await client.post("/tabellone", headers=_auth(player), json={"scudetto_team": "Milan"})
+    assert r.status_code == 409
+
+
 # ─── 5 & 6: outcome + scoring con cap ─────────────────────────────────────────────
 
 
