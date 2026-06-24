@@ -35,11 +35,23 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 | 4 — Rounds & Matches | ✅ Completata |
 | 5 — Predictions & Scoring | ✅ Completata |
 | 6 — Leaderboard & Bonus | ✅ Completata |
-| 7 — API-Football | ⬜ Non iniziata |
+| 7 — API-Football | ⬜ Non iniziata (inserimento partite/risultati manuale) |
 | 8 — Frontend Foundation | ✅ Completata |
-| 9 — Frontend Player | ✅ Completata |
+| 9 — Frontend Player | ✅ Completata (incl. pagina Regolamento, vista riepilogo tabellone) |
 | 10 — Frontend Admin | ✅ Completata |
-| 11 — Deployment | ⬜ Non iniziata (PWA installabile predisposta) |
+| 11 — Deployment | ⬜ Non iniziata — predisposti: PWA installabile, rifiniture mobile, opzioni hosting ([hosting_options.md](hosting_options.md)) |
+
+### Aggiunte/affinamenti durante la review (oltre il piano base)
+
+- Previsioni: **segno esplicito** su ogni partita + **risultato esatto** solo sulle partite flaggate dall'admin (`Match.requires_exact_score`).
+- Tabellone mercato: penalità **−5 a voce** calcolata rispetto all'**originale** (rimodificare la stessa voce o tornare indietro non accumula); **compilazione tardiva** ammessa con **−30** una tantum.
+- Classifica: colonne **Pieni / Gol / Weekend** separate.
+- Fix cache cross-utente al login/logout.
+- Mobile: navbar con **hamburger**, input **no-zoom iOS**, **safe-area** barre fisse.
+- Pagina **Regolamento** (player + admin) che rende `docs/rules/REGOLAMENTO.md`.
+
+> ⚠️ La pagina Regolamento usa una **copia** bundlata in `frontend/src/content/regolamento.md`
+> (senza la §9 "Note per il Coding Agent"). Va rigenerata se si modifica il regolamento sorgente.
 
 ---
 
