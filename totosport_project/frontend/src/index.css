@@ -9,3 +9,17 @@
 body {
   @apply bg-neutral-50 text-neutral-900 antialiased;
 }
+
+/* Mobile: evita lo zoom automatico di iOS al focus sugli input (font < 16px) */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Barre fisse in fondo: rispetta la safe area dell'iPhone (home indicator) */
+.pb-safe {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+}

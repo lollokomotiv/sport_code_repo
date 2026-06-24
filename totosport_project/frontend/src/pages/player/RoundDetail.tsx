@@ -163,7 +163,7 @@ export default function RoundDetail() {
       </div>
 
       {!locked && (
-        <div className="fixed inset-x-0 bottom-0 border-t bg-white p-3">
+        <div className="fixed inset-x-0 bottom-0 border-t bg-white px-3 pt-3 pb-safe">
           <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4">
             {saved && <span className="text-sm text-brand-600">Salvato ✓</span>}
             {mutation.isError && <span className="text-sm text-miss">Errore nel salvataggio</span>}

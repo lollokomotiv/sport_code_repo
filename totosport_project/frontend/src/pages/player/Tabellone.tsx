@@ -301,7 +301,7 @@ export default function Tabellone() {
 
       {/* Barra salvataggio sticky — solo in modalità form */}
       {showForm && (
-        <div className="fixed inset-x-0 bottom-0 border-t bg-white p-3">
+        <div className="fixed inset-x-0 bottom-0 border-t bg-white px-3 pt-3 pb-safe">
           <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4">
             {errMsg && <span className="text-sm text-miss">{errMsg}</span>}
             {isMercato && tabellone && changedKeys.length > 0 && (
