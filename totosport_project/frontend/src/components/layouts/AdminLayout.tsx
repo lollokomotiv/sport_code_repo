@@ -10,6 +10,7 @@ const items: NavItem[] = [
   { to: '/admin/tabellone', label: 'Tabellone' },
   { to: '/admin/leaderboard', label: 'Classifica' },
   { to: '/admin/users', label: 'Giocatori' },
+  { to: '/admin/regolamento', label: 'Regolamento' },
 ]
 
 /** Area admin: oltre all'auth, richiede ruolo admin (altrimenti torna al player). */

@@ -23,3 +23,92 @@ body {
 .pb-safe {
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
+
+/* Rendering del markdown (pagina Regolamento) */
+.markdown {
+  color: #171717;
+  line-height: 1.65;
+  word-wrap: break-word;
+}
+.markdown h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+}
+.markdown h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.markdown h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+}
+.markdown p {
+  margin: 0.6rem 0;
+}
+.markdown ul,
+.markdown ol {
+  margin: 0.6rem 0;
+  padding-left: 1.4rem;
+  list-style: revert;
+}
+.markdown li {
+  margin: 0.2rem 0;
+}
+.markdown a {
+  color: #15803d;
+  text-decoration: underline;
+}
+.markdown strong {
+  font-weight: 600;
+}
+.markdown code {
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.9em;
+}
+.markdown pre {
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.markdown pre code {
+  background: none;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 0.75rem;
+  color: #6b7280;
+  margin: 0.75rem 0;
+}
+.markdown hr {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.25rem 0;
+}
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid #e5e7eb;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.markdown th {
+  background: #f9fafb;
+  font-weight: 600;
+}

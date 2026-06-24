@@ -86,6 +86,31 @@ Mostra le previsioni inserite con stato: "⏳ In attesa", "✅ N pt", "❌ 0 pt"
 
 ---
 
+### `/player/regolamento` — Regolamento
+
+Pagina in **sola lettura** con il regolamento completo del gioco, così ogni
+giocatore può consultarlo quando vuole (scoring, bonus, mercato, tabellone…).
+
+**Contenuto:**
+- Mostra il testo di `docs/rules/REGOLAMENTO.md` (è la fonte di verità delle regole).
+- Approccio consigliato: importare il markdown come testo nel frontend e renderizzarlo
+  con un renderer markdown (es. `react-markdown`), così la pagina resta allineata
+  al regolamento senza riscriverlo a mano. In alternativa, una copia statica del
+  contenuto in un componente.
+
+**Comportamento / UX:**
+- Voce **"Regolamento"** nella navbar del giocatore (e utile anche in quella admin).
+- Layout leggibile e scrollabile su mobile (contenuto lungo): tipografia chiara,
+  titoli e tabelle ben spaziati.
+- Niente interazioni: è una pagina informativa.
+- Opzionale: link al Regolamento anche dalla pagina di login (per chi non è ancora
+  entrato) e un indice/anchor per saltare alle sezioni.
+
+**Rotta:** `/player/regolamento` (più eventuale `/admin/regolamento` che riusa lo
+stesso componente).
+
+---
+
 ## Componenti condivisi
 
 - [ ] `CompetitionBadge` — chip colorato per Serie A / Serie B / Champions
@@ -94,6 +119,7 @@ Mostra le previsioni inserite con stato: "⏳ In attesa", "✅ N pt", "❌ 0 pt"
 - [ ] `MatchScore` — display del risultato (es. "2 - 1") con animazione se appena inserito
 - [ ] `SignIndicator` — mostra "1", "X" o "2" in base ai gol inseriti
 - [ ] `TeamAutocomplete` — input con lista squadre per stagione (per tabellone)
+- [ ] `MarkdownView` — rende il markdown del regolamento (e altri testi lunghi)
 
 ---
 
@@ -117,3 +143,4 @@ Mostra le previsioni inserite con stato: "⏳ In attesa", "✅ N pt", "❌ 0 pt"
 6. `/player/tabellone` → compilo e salvo
 7. Finestra mercato → modifico campo → modale conferma → -5pt visibili in classifica
 8. Test su viewport mobile (375px): tutto leggibile e tappable
+9. Apro `/player/regolamento` → vedo il regolamento completo, leggibile e scrollabile su mobile

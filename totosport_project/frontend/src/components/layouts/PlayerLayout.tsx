@@ -7,6 +7,7 @@ const items: NavItem[] = [
   { to: '/player/predictions', label: 'Le mie previsioni' },
   { to: '/player/leaderboard', label: 'Classifica' },
   { to: '/player/tabellone', label: 'Tabellone' },
+  { to: '/player/regolamento', label: 'Regolamento' },
 ]
 
 export default function PlayerLayout() {

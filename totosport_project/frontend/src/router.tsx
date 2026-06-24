@@ -1,5 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter } from 'react-router-dom'
 
+import LoadingSpinner from '@/components/LoadingSpinner'
 import AdminLayout from '@/components/layouts/AdminLayout'
 import PlayerLayout from '@/components/layouts/PlayerLayout'
 import ProtectedLayout from '@/components/layouts/ProtectedLayout'
@@ -17,6 +19,14 @@ import RoundsList from '@/pages/player/RoundsList'
 import Tabellone from '@/pages/player/Tabellone'
 import RoleHome from '@/pages/RoleHome'
 
+// Lazy: react-markdown + il regolamento si scaricano solo aprendo la pagina.
+const Regolamento = lazy(() => import('@/pages/Regolamento'))
+const regolamentoElement = (
+  <Suspense fallback={<LoadingSpinner />}>
+    <Regolamento />
+  </Suspense>
+)
+
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   {
@@ -33,6 +43,7 @@ export const router = createBrowserRouter([
           { path: 'leaderboard', element: <Leaderboard /> },
           { path: 'predictions', element: <MyPredictions /> },
           { path: 'tabellone', element: <Tabellone /> },
+          { path: 'regolamento', element: regolamentoElement },
         ],
       },
       {
@@ -46,6 +57,7 @@ export const router = createBrowserRouter([
           { path: 'tabellone', element: <AdminTabellone /> },
           { path: 'leaderboard', element: <Leaderboard /> },
           { path: 'users', element: <Players /> },
+          { path: 'regolamento', element: regolamentoElement },
         ],
       },
     ],
