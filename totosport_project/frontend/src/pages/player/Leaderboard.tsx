@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 
 import { getLeaderboard } from '@/api/leaderboard'
 import LoadingSpinner from '@/components/LoadingSpinner'
@@ -6,14 +7,24 @@ import { useAuthStore } from '@/store/authStore'
 
 export default function Leaderboard() {
   const me = useAuthStore((s) => s.user)
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['leaderboard'],
     queryFn: getLeaderboard,
     refetchInterval: 30_000,
   })
 
   if (isLoading) return <LoadingSpinner />
-  if (isError) return <p className="text-miss">Errore nel caricamento della classifica.</p>
+  if (isError) {
+    // 404 = nessuna stagione ancora creata: messaggio chiaro, non un errore generico
+    const noSeason = isAxiosError(error) && error.response?.status === 404
+    return (
+      <p className="text-neutral-500">
+        {noSeason
+          ? "Nessuna stagione attiva: la classifica sarà disponibile quando l'admin crea una stagione."
+          : 'Errore nel caricamento della classifica.'}
+      </p>
+    )
+  }
   if (!data || data.length === 0) return <p className="text-neutral-500">Classifica ancora vuota.</p>
 
   return (
