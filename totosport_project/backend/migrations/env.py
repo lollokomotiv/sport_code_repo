@@ -27,9 +27,18 @@ def get_url() -> str:
     """
     Legge DATABASE_URL dal .env e converte asyncpg → psycopg2.
     Alembic usa sempre un engine sincrono.
+
+    Se DB_SSL è attivo (produzione, es. Neon), aggiunge `sslmode=require` alla
+    URL psycopg2 (asyncpg gestisce l'SSL nell'engine dell'app; psycopg2 lo vuole
+    nella URL). Così migrazioni e runtime usano la stessa DATABASE_URL asyncpg.
     """
-    url = os.getenv("DATABASE_URL", "")
-    return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    url = os.getenv("DATABASE_URL", "").replace(
+        "postgresql+asyncpg://", "postgresql+psycopg2://"
+    )
+    db_ssl = os.getenv("DB_SSL", "").lower() in ("1", "true", "yes")
+    if db_ssl and "sslmode=" not in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
+    return url
 
 
 def run_migrations_offline() -> None:
