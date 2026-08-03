@@ -4,6 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # Database
     database_url: str
+    # SSL verso il DB: True in produzione con Neon (o qualsiasi Postgres gestito).
+    # In locale (Postgres in Docker) resta False.
+    db_ssl: bool = False
 
     # Auth
     secret_key: str

@@ -1,34 +1,110 @@
-# Fase 11 — Deployment
+# Fase 11 — Deployment (percorso gratuito)
 
-Obiettivo: app deployata in produzione con Docker, Nginx, variabili d'ambiente sicure, e health check.
+Obiettivo: TotoSport **online**, con **HTTPS**, a **costo €0**, e con piena
+possibilità di fare modifiche in futuro (vedi `docs/OPERATIONS.md`).
+
+## Scelta effettuata: managed gratuito, 3 pezzi separati
+
+| Pezzo | Servizio (free) | Cosa fa | Note |
+|---|---|---|---|
+| **Frontend** (React statico) | **Vercel** (o Cloudflare Pages) | serve la SPA + HTTPS | sempre attivo, mai cold start |
+| **Backend** (FastAPI) | **Render** (free) | espone le API | si addormenta da idle → cold start ~30–60s |
+| **Database** (Postgres) | **Neon** (free) | dati persistenti | si risveglia in ~1s |
+
+L'autenticazione è **header-based** (JWT in `localStorage`, non cookie): quindi
+frontend e backend su **domini diversi** funzionano senza problemi di cookie.
+
+> ⚠️ **Differenza chiave rispetto al self-host.** Qui frontend e backend stanno su
+> **domini diversi**, perciò:
+> - il frontend va buildato con `VITE_API_BASE_URL = <URL pubblico del backend>`
+>   (NON `/api`, che vale solo nello scenario Nginx self-host);
+> - il backend deve autorizzare il **CORS** dell'origine del frontend
+>   (`ALLOWED_ORIGINS`).
 
 ---
 
-## Checklist
+## Checklist di deploy
 
-### Backend — Dockerfile produzione
+### Step 0 — Prerequisiti
+- [ ] Repo su GitHub (già presente).
+- [ ] Account creati: **GitHub**, **Neon**, **Render**, **Vercel** (o Cloudflare).
 
+### Step 1 — Database su Neon
+- [ ] Crea un progetto Neon → copia la **connection string**.
+- [ ] Ricava due forme della URL:
+  - **Runtime (backend, asyncpg):** `postgresql+asyncpg://USER:PASS@HOST/DB`
+  - **Migrazioni (Alembic → psycopg2):** `postgresql+psycopg2://USER:PASS@HOST/DB?sslmode=require`
+    (`env.py` converte già asyncpg→psycopg2; serve solo che l'SSL sia richiesto).
+- [ ] **Nota SSL:** Neon richiede SSL. Se il backend non si connette con asyncpg,
+  va aggiunto l'SSL (una riga in `app/database.py` o `?ssl=require` nella URL).
+  È un fix di 1 riga: lo sistemiamo al primo tentativo se serve.
+
+### Step 2 — Backend su Render
+- [ ] **New → Web Service** → collega il repo.
+- [ ] **Root directory:** `totosport_project/backend`
+- [ ] **Runtime:** Docker (usa `backend/Dockerfile`, già presente).
+- [ ] **Start command** (deve ascoltare sulla porta della piattaforma):
+      `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- [ ] **Health check path:** `/health`
+- [ ] **Environment variables:**
+  - `DATABASE_URL` → Neon, **forma asyncpg** (Step 1)
+  - `SECRET_KEY` → genera con `python -c "import secrets; print(secrets.token_hex(32))"`
+  - `ACCESS_TOKEN_EXPIRE_MINUTES=15`
+  - `REFRESH_TOKEN_EXPIRE_DAYS=7`
+  - `ALLOWED_ORIGINS=["https://IL-TUO-FRONTEND.vercel.app"]` (lo riempi dopo lo Step 3)
+  - *(API-Football non serve finché la Fase 7 non è fatta)*
+- [ ] Deploy → annota l'**URL pubblico** (es. `https://totosport-api.onrender.com`).
+
+### Step 3 — Frontend su Vercel (o Cloudflare Pages)
+- [ ] **New Project** → importa il repo.
+- [ ] **Root directory:** `totosport_project/frontend`
+- [ ] **Build command:** `npm run build` — **Output:** `dist`
+- [ ] **Environment variable:** `VITE_API_BASE_URL = https://totosport-api.onrender.com`
+      (l'URL del backend dallo Step 2)
+- [ ] **SPA rewrite** (tutte le route → `index.html`): serve un file di config
+      (`vercel.json` per Vercel, `_redirects` per Cloudflare Pages) — **lo creo io**
+      nel repo quando partiamo.
+- [ ] Deploy → annota l'**URL** (es. `https://totosport.vercel.app`).
+
+### Step 4 — Collega i due lati (CORS)
+- [ ] Su Render, imposta `ALLOWED_ORIGINS = ["https://totosport.vercel.app"]`
+      (l'URL del frontend) → **redeploy** del backend.
+
+### Step 5 — Migrazioni + primo admin
+- [ ] **Migrazioni** (dal tuo Mac, o dalla Shell di Render):
+      `DATABASE_URL="<Neon forma psycopg2 con sslmode=require>" alembic upgrade head`
+- [ ] **Primo admin** (il DB parte vuoto): esegui `backend/scripts/create_admin.py`
+      puntando al DB Neon (username / email / password a tua scelta).
+- [ ] Poi, da interfaccia admin: crei stagione, giocatori, giornate.
+
+### Step 6 — Verifica (test di accettazione)
+- [ ] `GET https://<backend>/health` → `{"status": "ok", ...}`
+- [ ] Apri il frontend, login con l'admin, crea una giornata di prova.
+- [ ] F5 su una route interna (es. `/player/tabellone`) → **niente 404** (SPA rewrite ok).
+- [ ] Su iPhone (Safari): **"Aggiungi a Home"** → PWA installata (HTTPS presente).
+
+---
+
+## Note sul tier gratuito
+
+- **Cold start**: il backend Render free si addormenta da idle → il primo accesso
+  dopo la pausa attende ~30–60s. Per eliminarlo: piano Render a pagamento
+  (~**7 $/mese**). Non cambia nulla d'altro.
+- **Neon free**: dati persistenti, storage generoso per ~20 amici; si risveglia in ~1s.
+- **Modifiche dopo il go-live** (codice, schema, dati, backup): vedi
+  **`docs/OPERATIONS.md`**.
+
+---
+
+## Appendice — Alternativa: self-host VPS + Docker
+
+Se in futuro preferissi un VPS (~5 €/mese, controllo pieno, un solo box con
+frontend+backend+DB e Nginx che fa da reverse proxy), qui restano i template.
+In questo scenario frontend e backend sono **stesso origine** → `VITE_API_BASE_URL=/api`
+e niente CORS.
+
+### `frontend/Dockerfile` (multi-stage)
 ```dockerfile
-# backend/Dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Non root in produzione
-RUN adduser --disabled-password --gecos '' appuser
-USER appuser
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
-```
-
-### Frontend — Dockerfile produzione (multi-stage)
-
-```dockerfile
-# frontend/Dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json .
@@ -42,21 +118,14 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
 
-### Nginx — configurazione (`frontend/nginx.conf`)
-
+### `frontend/nginx.conf`
 ```nginx
 server {
     listen 80;
     root /usr/share/nginx/html;
     index index.html;
-
-    # SPA: tutte le route non-file → index.html
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Proxy API al backend
-    location /api/ {
+    location / { try_files $uri $uri/ /index.html; }   # SPA
+    location /api/ {                                     # proxy al backend
         proxy_pass http://backend:8000/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -64,11 +133,8 @@ server {
 }
 ```
 
-### Docker Compose produzione (`docker-compose.prod.yml`)
-
+### `docker-compose.prod.yml` (estratto)
 ```yaml
-version: "3.9"
-
 services:
   db:
     image: postgres:16-alpine
@@ -76,128 +142,21 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    volumes: [postgres_data:/var/lib/postgresql/data]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
-      interval: 10s
-      retries: 5
-
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: { context: ./backend }
     env_file: .env.prod
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: [db]
     restart: unless-stopped
-
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"  # se usi HTTPS con certbot
-    depends_on:
-      - backend
+    build: { context: ./frontend }
+    ports: ["80:80", "443:443"]
+    depends_on: [backend]
     restart: unless-stopped
-
-volumes:
-  postgres_data:
+volumes: { postgres_data: {} }
 ```
 
-### Health check endpoint
-
-- [ ] `GET /health` → `{"status": "ok", "db": "ok"}` (controlla connessione DB)
-- [ ] Usato da Docker healthcheck e da eventuali monitoring tool
-
-### Variabili d'ambiente produzione (`.env.prod`)
-
-```env
-# Database
-POSTGRES_USER=totosport
-POSTGRES_PASSWORD=<password-sicura>
-POSTGRES_DB=totosport
-DATABASE_URL=postgresql+asyncpg://totosport:<password>@db:5432/totosport
-
-# Auth (genera con: python -c "import secrets; print(secrets.token_hex(32))")
-SECRET_KEY=<64-char-hex>
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=7
-
-# API-Football
-API_FOOTBALL_KEY=<chiave-rapidapi>
-API_FOOTBALL_HOST=v3.football.api-sports.io
-
-# CORS (origins permessi)
-ALLOWED_ORIGINS=https://tuodominio.com
-```
-
-**Regole per i secret:**
-- Non committare mai `.env.prod`
-- Usa Docker secrets o un secret manager (Vault, AWS SSM) per produzione seria
-- Ruota `SECRET_KEY` invalidando tutti i token esistenti — avvisa gli utenti
-
-### Migrazioni in produzione
-
-```bash
-# Prima di ogni deploy con modifiche al DB:
-docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
-```
-
-Automatizza questo come parte del deploy script.
-
-### Deploy workflow
-
-```bash
-#!/bin/bash
-# deploy.sh
-
-git pull origin main
-
-# Build e avvio
-docker-compose -f docker-compose.prod.yml build
-docker-compose -f docker-compose.prod.yml up -d
-
-# Migrazioni
-docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
-
-echo "Deploy completato"
-```
-
-### HTTPS (opzionale ma consigliato)
-
-Se il server è esposto su internet, usa **Certbot + Let's Encrypt**:
-
-```bash
-docker run --rm -v /etc/letsencrypt:/etc/letsencrypt \
-  certbot/certbot certonly --standalone -d tuodominio.com
-```
-
-Poi aggiorna `nginx.conf` con la config HTTPS e i path ai certificati.
-
-### Backup DB
-
-```bash
-# Backup
-docker-compose exec db pg_dump -U totosport totosport > backup_$(date +%Y%m%d).sql
-
-# Restore
-docker-compose exec -T db psql -U totosport totosport < backup_20260101.sql
-```
-
-Automatizza il backup giornaliero con un cron job sull'host.
-
----
-
-## Test di accettazione fase 11
-
-1. `docker-compose -f docker-compose.prod.yml up -d` senza errori
-2. `GET /health` → `{"status": "ok", "db": "ok"}`
-3. Frontend accessibile su porta 80, React Router funzionante (F5 su una route interna non dà 404)
-4. Login funzionante end-to-end in produzione
-5. Migrazione Alembic applicata (`alembic current` mostra la head revision)
-6. Backup DB eseguito e restore verificato su DB di test
+- HTTPS con **Certbot/Let's Encrypt**; migrazioni con
+  `docker compose -f docker-compose.prod.yml exec backend alembic upgrade head`.
+- Confronto completo dei provider: [hosting_options.md](hosting_options.md).
