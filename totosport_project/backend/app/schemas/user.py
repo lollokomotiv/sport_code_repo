@@ -32,3 +32,5 @@ class UserOut(BaseModel):
 class UserPatch(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
+    password: str | None = None  # se presente, reimposta la password
+    is_active: bool | None = None  # attiva/disattiva l'account

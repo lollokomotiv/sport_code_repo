@@ -153,3 +153,78 @@ async def test_list_users_as_admin(client: AsyncClient, admin_token):
 async def test_list_users_requires_auth(client: AsyncClient):
     r = await client.get("/admin/users")
     assert r.status_code == 401  # nessun header → HTTPBearer 401
+
+
+# ─── 8b: admin gestisce gli account (modifica/attiva-disattiva/elimina) ─────────────
+
+
+@pytest_asyncio.fixture
+async def player_user(db_session) -> User:
+    u = User(
+        username="giocatore",
+        email="g@example.com",
+        password_hash=hash_password("old12345"),
+        role=UserRole.player,
+    )
+    db_session.add(u)
+    await db_session.commit()
+    return u
+
+
+def _hdr(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def test_admin_updates_email_and_password(client, admin_token, player_user):
+    r = await client.patch(
+        f"/admin/users/{player_user.id}",
+        headers=_hdr(admin_token),
+        json={"email": "nuova@example.com", "password": "new12345"},
+    )
+    assert r.status_code == 200
+    assert r.json()["email"] == "nuova@example.com"
+    # la nuova password funziona per il login
+    login = await client.post(
+        "/auth/login", json={"username": "giocatore", "password": "new12345"}
+    )
+    assert login.status_code == 200
+
+
+async def test_admin_toggles_active(client, admin_token, player_user):
+    off = await client.patch(
+        f"/admin/users/{player_user.id}", headers=_hdr(admin_token), json={"is_active": False}
+    )
+    assert off.status_code == 200 and off.json()["is_active"] is False
+    on = await client.patch(
+        f"/admin/users/{player_user.id}", headers=_hdr(admin_token), json={"is_active": True}
+    )
+    assert on.json()["is_active"] is True
+
+
+async def test_admin_deletes_user(client, admin_token, player_user):
+    r = await client.delete(f"/admin/users/{player_user.id}", headers=_hdr(admin_token))
+    assert r.status_code == 204
+    users = await client.get("/admin/users", headers=_hdr(admin_token))
+    assert all(u["id"] != str(player_user.id) for u in users.json())
+
+
+async def test_admin_cannot_delete_self(client, admin_user, admin_token):
+    r = await client.delete(f"/admin/users/{admin_user.id}", headers=_hdr(admin_token))
+    assert r.status_code == 400
+
+
+async def test_update_email_conflict(client, admin_token, player_user, db_session):
+    other = User(
+        username="altro",
+        email="altro@example.com",
+        password_hash=hash_password("x1234567"),
+        role=UserRole.player,
+    )
+    db_session.add(other)
+    await db_session.commit()
+    r = await client.patch(
+        f"/admin/users/{player_user.id}",
+        headers=_hdr(admin_token),
+        json={"email": "altro@example.com"},
+    )
+    assert r.status_code == 409
