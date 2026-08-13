@@ -23,7 +23,7 @@ class Season(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
-    name: Mapped[str] = mapped_column(String(10), nullable=False)  # es. "2025-26"
+    name: Mapped[str] = mapped_column(String(30), nullable=False)  # es. "2025-26"
     status: Mapped[SeasonStatus] = mapped_column(
         Enum(SeasonStatus, name="seasonstatus"),
         nullable=False,

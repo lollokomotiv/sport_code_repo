@@ -2,13 +2,13 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.season import SeasonStatus
 
 
 class SeasonCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=30)
     tabellone_deadline: Optional[datetime] = None
     modification_deadline: Optional[datetime] = None
 

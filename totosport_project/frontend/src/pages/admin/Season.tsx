@@ -217,9 +217,10 @@ function CreateSeasonForm({ onCreated }: { onCreated: () => void }) {
     <div className="rounded-xl border bg-white p-4">
       <h2 className="mb-3 text-sm font-medium text-neutral-700">Nuova stagione</h2>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-neutral-600">Nome (es. 2026-27)</span>
+        <span className="text-neutral-600">Nome (es. 2026-27) — max 30 caratteri</span>
         <input
           value={name}
+          maxLength={30}
           onChange={(e) => setName(e.target.value)}
           className="rounded-lg border px-3 py-2"
         />
