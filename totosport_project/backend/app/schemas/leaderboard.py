@@ -46,3 +46,22 @@ class SeasonBonusResult(BaseModel):
     bonus_signs: list[uuid.UUID]
     bonus_exacts: list[uuid.UUID]
     bonus_tabellone: list[uuid.UUID]
+
+
+# ─── Classifiche "speciali" (a conteggio, con i punti come dettaglio) ──────────
+
+
+class SpecialRankingEntry(BaseModel):
+    rank: int
+    player_id: uuid.UUID
+    username: str
+    count: int  # headline: quante ne ha azzeccate
+    points: int  # dettaglio secondario
+
+
+class SpecialRankings(BaseModel):
+    """Segni / Pieni / Pieni con 5+ gol — cumulativo stagione, giornate completate."""
+
+    segni: list[SpecialRankingEntry]
+    pieni: list[SpecialRankingEntry]
+    pieni_5plus: list[SpecialRankingEntry]

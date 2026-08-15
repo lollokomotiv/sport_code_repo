@@ -327,3 +327,43 @@ async def test_submission_status_requires_admin(client: AsyncClient, admin, p1, 
     rid, [m1] = await _open_round_with_matches(client, admin, [("A", "B", "serie_a", False)])
     r = await client.get(f"/admin/predictions/{rid}/status", headers=_auth(p1))
     assert r.status_code == 403
+
+
+# ─── Classifiche speciali (segni / pieni / pieni 5+) ──────────────────────────
+
+
+async def test_special_rankings(client: AsyncClient, admin, p1, p2, season):
+    # m1 esatto (2-1, 3 gol), m2 esatto (3-3, 6 gol → 5+)
+    rid, [m1, m2] = await _open_round_with_matches(
+        client, admin,
+        [("Inter", "Milan", "serie_a", True), ("Roma", "Lazio", "serie_a", True)],
+    )
+    # p1: entrambi i pieni (m2 è da 5+ gol)
+    await client.post("/predictions/match", headers=_auth(p1),
+                      json={"match_id": m1, "predicted_sign": "1", "predicted_home_goals": 2, "predicted_away_goals": 1})
+    await client.post("/predictions/match", headers=_auth(p1),
+                      json={"match_id": m2, "predicted_sign": "X", "predicted_home_goals": 3, "predicted_away_goals": 3})
+    # p2: solo segni (m1 giusto, m2 sbagliato)
+    await client.post("/predictions/match", headers=_auth(p2), json={"match_id": m1, "predicted_sign": "1"})
+    await client.post("/predictions/match", headers=_auth(p2), json={"match_id": m2, "predicted_sign": "2"})
+
+    await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "closed"})
+    for mid, h, a in [(m1, 2, 1), (m2, 3, 3)]:
+        await client.patch(f"/matches/{mid}/result", headers=_auth(admin), json={"home_goals": h, "away_goals": a})
+    await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "completed"})
+
+    r = await client.get("/leaderboard/special", headers=_auth(p1))
+    assert r.status_code == 200
+    body = r.json()
+
+    pie = {e["username"]: e for e in body["pieni"]}
+    assert pie["p1"]["count"] == 2 and pie["p1"]["points"] == 14  # 5 + (7+2)
+    assert pie["p2"]["count"] == 0
+
+    p5 = {e["username"]: e for e in body["pieni_5plus"]}
+    assert p5["p1"]["count"] == 1 and p5["p1"]["points"] == 9  # 7 + 2
+
+    seg = {e["username"]: e for e in body["segni"]}
+    assert seg["p1"]["count"] == 2
+    assert seg["p2"]["count"] == 1
+    assert seg["p1"]["rank"] == 1  # più segni → primo

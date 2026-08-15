@@ -15,8 +15,10 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.match import Match
+from app.models.match_prediction import MatchPrediction
 from app.models.player_season_profile import PlayerSeasonProfile
-from app.models.round import Round
+from app.models.round import Round, RoundStatus
 from app.models.round_score import RoundScore
 from app.models.season import Season, SeasonStatus
 from app.models.table_prediction import TablePrediction
@@ -27,6 +29,7 @@ from app.schemas.leaderboard import (
     RoundLeaderboardEntry,
     SeasonBonusResult,
 )
+from app.services.scoring import EXACT_BONUS, derive_sign
 
 SEASON_BONUS_POINTS = 10
 
@@ -260,3 +263,84 @@ async def finalize_season(season: Season, db: AsyncSession) -> SeasonBonusResult
         bonus_exacts=list(bonus_exacts.keys()),
         bonus_tabellone=list(bonus_tabellone.keys()),
     )
+
+
+# ─── Classifiche "speciali": segni / pieni / pieni 5+ (dai dati grezzi) ────────
+
+
+def _rank(items: list[dict]) -> list[dict]:
+    """Ordina per conteggio (poi punti, poi nome) e assegna il rank; parità di
+    conteggio = stesso rank."""
+    items.sort(key=lambda x: (-x["count"], -x["points"], x["username"].lower()))
+    out: list[dict] = []
+    prev_count = None
+    rank = 0
+    for i, it in enumerate(items):
+        if it["count"] != prev_count:
+            rank = i + 1
+            prev_count = it["count"]
+        out.append({**it, "rank": rank})
+    return out
+
+
+async def special_rankings(season_id: uuid.UUID, db: AsyncSession) -> dict:
+    """
+    Segni / Pieni / Pieni 5+ per la stagione, cumulativo, **solo giornate
+    completate**. Calcolate dai dati grezzi (previsione vs risultato reale):
+      - segno preso: predicted_sign == segno del risultato reale;
+      - pieno: partita con risultato esatto richiesto e goal previsti == reali;
+      - pieno 5+: pieno su partita con >= 5 gol totali (danno il +2).
+    Headline = conteggio; `points` = punti di quella categoria (dettaglio).
+    """
+    rows = await db.execute(
+        select(MatchPrediction, Match, User.username)
+        .join(Match, Match.id == MatchPrediction.match_id)
+        .join(Round, Round.id == Match.round_id)
+        .join(User, User.id == MatchPrediction.player_id)
+        .where(
+            Round.season_id == season_id,
+            Round.status == RoundStatus.completed,
+            Match.actual_home_goals.is_not(None),
+            Match.actual_away_goals.is_not(None),
+        )
+    )
+
+    agg: dict = {}
+    for mp, m, username in rows.all():
+        a = agg.setdefault(
+            mp.player_id,
+            {"username": username, "seg_c": 0, "seg_p": 0, "pie_c": 0, "pie_p": 0, "p5_c": 0, "p5_p": 0},
+        )
+        actual_sign = derive_sign(m.actual_home_goals, m.actual_away_goals)
+        if mp.predicted_sign == actual_sign:
+            a["seg_c"] += 1
+            a["seg_p"] += 1
+        is_exact = (
+            m.requires_exact_score
+            and mp.predicted_home_goals is not None
+            and mp.predicted_away_goals is not None
+            and mp.predicted_home_goals == m.actual_home_goals
+            and mp.predicted_away_goals == m.actual_away_goals
+        )
+        if is_exact:
+            total = m.actual_home_goals + m.actual_away_goals
+            pts = EXACT_BONUS[actual_sign] + (2 if total >= 5 else 0)
+            a["pie_c"] += 1
+            a["pie_p"] += pts
+            if total >= 5:
+                a["p5_c"] += 1
+                a["p5_p"] += pts
+
+    def build(count_key: str, points_key: str) -> list[dict]:
+        return _rank(
+            [
+                {"player_id": pid, "username": a["username"], "count": a[count_key], "points": a[points_key]}
+                for pid, a in agg.items()
+            ]
+        )
+
+    return {
+        "segni": build("seg_c", "seg_p"),
+        "pieni": build("pie_c", "pie_p"),
+        "pieni_5plus": build("p5_c", "p5_p"),
+    }

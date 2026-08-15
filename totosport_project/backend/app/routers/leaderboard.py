@@ -10,12 +10,14 @@ from app.schemas.leaderboard import (
     LeaderboardEntry,
     MetricLeaderboardEntry,
     RoundLeaderboardEntry,
+    SpecialRankings,
 )
 from app.services.leaderboard import (
     exacts_leaderboard,
     general_leaderboard,
     round_leaderboard,
     signs_leaderboard,
+    special_rankings,
     tabellone_leaderboard,
 )
 from app.services.season import get_latest_season
@@ -69,3 +71,13 @@ async def tabellone(
     _user: User = Depends(get_current_user),
 ) -> list[MetricLeaderboardEntry]:
     return await tabellone_leaderboard(await _season_id(db), db)
+
+
+@router.get("/special", response_model=SpecialRankings)
+async def special(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> SpecialRankings:
+    """Classifiche speciali: segni / pieni / pieni 5+ (conteggio + punti)."""
+    data = await special_rankings(await _season_id(db), db)
+    return SpecialRankings.model_validate(data)
