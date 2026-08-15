@@ -83,6 +83,42 @@ class RoundPredictionsBundle(BaseModel):
     round_predictions: list[RoundPredictionOut]
 
 
+# ─── F1: schedine degli altri (visibili solo a finestra chiusa) ────────────────
+
+
+class PlayerPredictions(BaseModel):
+    """Schedina di un singolo giocatore per una giornata (con identità)."""
+
+    player_id: uuid.UUID
+    username: str
+    submitted_at: Optional[datetime]
+    match_predictions: list[MatchPredictionOut]
+    round_predictions: list[RoundPredictionOut]
+
+
+class RoundPredictionsView(BaseModel):
+    """Vista di tutte le schedine compilate di una giornata."""
+
+    players: list[PlayerPredictions]
+
+
+# ─── F2: stato compilazione per l'admin (nessun contenuto) ─────────────────────
+
+
+class PlayerSubmissionStatus(BaseModel):
+    player_id: uuid.UUID
+    username: str
+    matches_predicted: int
+    total_matches: int
+    round_goals_count: int
+    submitted_at: Optional[datetime]
+
+
+class RoundSubmissionStatus(BaseModel):
+    total_matches: int
+    players: list[PlayerSubmissionStatus]
+
+
 class RoundScoreOut(BaseModel):
     id: uuid.UUID
     player_id: uuid.UUID

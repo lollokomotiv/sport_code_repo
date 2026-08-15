@@ -49,6 +49,9 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 - Fix cache cross-utente al login/logout.
 - Mobile: navbar con **hamburger**, input **no-zoom iOS**, **safe-area** barre fisse.
 - Pagina **Regolamento** (player + admin) che rende `docs/rules/REGOLAMENTO.md`.
+- Gestione account giocatori (admin): modifica email/password, attiva/disattiva, eliminazione definitiva.
+- **F1 — Schedine altrui dopo la deadline**: ogni utente autenticato vede le schedine di tutti gli altri **solo** a finestra chiusa (deadline superata o giornata completata); prima è bloccato lato server. Endpoint `GET /predictions/round/{id}`, sezione "Schedine degli altri" nel dettaglio giornata player.
+- **F2 — Cruscotto admin "chi manca"**: per ogni giornata l'admin vede i giocatori divisi in **Completa / Parziale / Manca** (solo conteggi, mai il contenuto). Endpoint `GET /admin/predictions/{id}/status`, pannello "Stato compilazione" nel dettaglio giornata admin.
 
 > ⚠️ La pagina Regolamento usa una **copia** bundlata in `frontend/src/content/regolamento.md`
 > (senza la §9 "Note per il Coding Agent"). Va rigenerata se si modifica il regolamento sorgente.

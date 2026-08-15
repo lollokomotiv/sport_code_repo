@@ -5,6 +5,7 @@ Regola: il SEGNO si pronostica su ogni partita (scelto, non derivato); il RISULT
 ESATTO solo sulle partite con requires_exact_score. Più totale gol per lega e bonus weekend.
 """
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -13,6 +14,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from app.models.match import Match
+from app.models.match_prediction import MatchPrediction
 from app.models.round import Competition, Round, RoundStatus
 from app.models.round_score import RoundScore
 from app.models.season import Season, SeasonStatus
@@ -223,4 +225,105 @@ async def test_full_round_scoring(client: AsyncClient, admin, p1, p2, season, db
 async def test_admin_predictions_gated_by_deadline(client: AsyncClient, admin, p1, season):
     rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", False)])
     r = await client.get(f"/admin/predictions/{rid}", headers=_auth(admin))
+    assert r.status_code == 403
+
+
+# ─── F1: schedine degli altri (prima/dopo deadline) ────────────────────────────
+
+
+async def _submit(client, player, match_id, sign="1"):
+    await client.post(
+        "/predictions/match", headers=_auth(player), json={"match_id": match_id, "predicted_sign": sign}
+    )
+
+
+async def _set_deadline_past(db_session, rid: str):
+    rnd = await db_session.get(Round, uuid.UUID(rid))
+    rnd.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    await db_session.commit()
+
+
+async def test_others_hidden_before_deadline(client: AsyncClient, admin, p1, p2, season):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", False)])
+    await _submit(client, p1, m1, "1")
+    # finestra ancora aperta → p2 NON può vedere le altrui
+    r = await client.get(f"/predictions/round/{rid}", headers=_auth(p2))
+    assert r.status_code == 403
+
+
+async def test_others_visible_after_deadline(client: AsyncClient, admin, p1, p2, season, db_session):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", False)])
+    await _submit(client, p1, m1, "1")
+    await _submit(client, p2, m1, "X")
+    await _set_deadline_past(db_session, rid)
+
+    r = await client.get(f"/predictions/round/{rid}", headers=_auth(p1))
+    assert r.status_code == 200
+    players = r.json()["players"]
+    signs = {pl["username"]: pl["match_predictions"][0]["predicted_sign"] for pl in players}
+    assert signs == {"p1": "1", "p2": "X"}
+
+
+async def test_non_compiler_can_view_after_deadline(client: AsyncClient, admin, p1, p2, season, db_session):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", False)])
+    await _submit(client, p1, m1, "1")  # solo p1 compila
+    await _set_deadline_past(db_session, rid)
+
+    # p2 non ha compilato ma può comunque vedere (Q1); in lista compare solo p1 (D2)
+    r = await client.get(f"/predictions/round/{rid}", headers=_auth(p2))
+    assert r.status_code == 200
+    assert [pl["username"] for pl in r.json()["players"]] == ["p1"]
+
+
+async def test_visible_when_completed(client: AsyncClient, admin, p1, season, db_session):
+    # giornata completed senza deadline → visibile (Q2)
+    rnd = Round(
+        season_id=season.id, name="G", competition=Competition.serie_a,
+        status=RoundStatus.completed, deadline=None,
+    )
+    db_session.add(rnd)
+    await db_session.flush()
+    m = Match(round_id=rnd.id, competition=Competition.serie_a, home_team="A", away_team="B")
+    db_session.add(m)
+    await db_session.flush()
+    db_session.add(
+        MatchPrediction(
+            player_id=p1.id, match_id=m.id, predicted_sign="1",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+    await db_session.commit()
+
+    r = await client.get(f"/predictions/round/{rnd.id}", headers=_auth(p1))
+    assert r.status_code == 200
+    assert r.json()["players"][0]["username"] == "p1"
+
+
+# ─── F2: cruscotto "chi manca" (admin, anche prima della deadline) ─────────────
+
+
+async def test_submission_status_three_states(client: AsyncClient, admin, p1, p2, season, db_session):
+    p3 = await _mk_user(db_session, "p3")  # non compilerà → "manca"
+    rid, [m1, m2] = await _open_round_with_matches(
+        client, admin, [("A", "B", "serie_a", False), ("C", "D", "serie_a", False)]
+    )
+    await _submit(client, p1, m1)
+    await _submit(client, p1, m2)  # completa
+    await _submit(client, p2, m1)  # parziale
+
+    r = await client.get(f"/admin/predictions/{rid}/status", headers=_auth(admin))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_matches"] == 2
+    by_user = {p["username"]: p for p in body["players"]}
+    assert by_user["p1"]["matches_predicted"] == 2  # completa
+    assert by_user["p2"]["matches_predicted"] == 1  # parziale
+    assert by_user[p3.username]["matches_predicted"] == 0  # manca
+    # nessun contenuto delle schedine deve trapelare
+    assert "predicted_sign" not in str(body)
+
+
+async def test_submission_status_requires_admin(client: AsyncClient, admin, p1, season):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("A", "B", "serie_a", False)])
+    r = await client.get(f"/admin/predictions/{rid}/status", headers=_auth(p1))
     assert r.status_code == 403

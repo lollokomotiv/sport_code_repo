@@ -27,3 +27,31 @@ export interface RoundPredictionsBundle {
   match_predictions: MatchPredictionOut[]
   round_predictions: RoundPredictionOut[]
 }
+
+// F1 — schedine degli altri (visibili solo dopo la deadline)
+export interface PlayerPredictions {
+  player_id: string
+  username: string
+  submitted_at: string | null
+  match_predictions: MatchPredictionOut[]
+  round_predictions: RoundPredictionOut[]
+}
+
+export interface RoundPredictionsView {
+  players: PlayerPredictions[]
+}
+
+// F2 — stato compilazione (admin, solo conteggi)
+export interface PlayerSubmissionStatus {
+  player_id: string
+  username: string
+  matches_predicted: number
+  total_matches: number
+  round_goals_count: number
+  submitted_at: string | null
+}
+
+export interface RoundSubmissionStatus {
+  total_matches: number
+  players: PlayerSubmissionStatus[]
+}

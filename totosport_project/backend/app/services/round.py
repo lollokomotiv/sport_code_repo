@@ -30,6 +30,20 @@ ALLOWED_TRANSITIONS: dict[RoundStatus, set[RoundStatus]] = {
 PLAYER_VISIBLE_STATUSES = (RoundStatus.open, RoundStatus.completed)
 
 
+def predictions_visible(rnd: Round) -> bool:
+    """
+    True se le schedine dei giocatori possono essere mostrate agli altri.
+
+    Regola (usa SEMPRE l'ora del server): visibili solo quando la finestra di
+    compilazione è chiusa, cioè deadline superata OPPURE giornata `completed`.
+    NON basta lo stato `closed`: l'admin potrebbe chiuderla a mano prima della
+    deadline, e prima della deadline le altrui non devono trapelare in alcun modo.
+    """
+    now = datetime.now(timezone.utc)
+    deadline_passed = rnd.deadline is not None and now >= rnd.deadline
+    return deadline_passed or rnd.status == RoundStatus.completed
+
+
 # ─── Eccezioni di dominio ────────────────────────────────────────────────────
 
 

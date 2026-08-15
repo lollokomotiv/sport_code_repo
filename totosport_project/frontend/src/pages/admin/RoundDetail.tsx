@@ -10,10 +10,12 @@ import {
   updateRoundStatus,
   type MatchCreateInput,
 } from '@/api/admin/rounds'
+import { getRoundSubmissionStatus } from '@/api/admin/predictions'
 import { getRound } from '@/api/rounds'
 import CompetitionBadge from '@/components/CompetitionBadge'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import RoundStatusBadge from '@/components/RoundStatusBadge'
+import type { PlayerSubmissionStatus } from '@/types/prediction'
 import type { Competition, MatchOut, RoundStatus } from '@/types/round'
 import { errorMessage, formatDate, fromDatetimeLocal } from '@/utils'
 
@@ -35,9 +37,18 @@ export default function AdminRoundDetail() {
     queryFn: () => getRound(id),
   })
 
+  // F2: stato compilazione (chi manca) — solo da quando la giornata è aperta in poi.
+  const statusQuery = useQuery({
+    queryKey: ['round-status', id],
+    queryFn: () => getRoundSubmissionStatus(id),
+    enabled: !!round && round.status !== 'draft',
+    refetchInterval: 30_000,
+  })
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['round', id] })
     queryClient.invalidateQueries({ queryKey: ['rounds'] })
+    queryClient.invalidateQueries({ queryKey: ['round-status', id] })
   }
 
   const statusMut = useMutation({
@@ -134,6 +145,79 @@ export default function AdminRoundDetail() {
           ))}
         </div>
       )}
+
+      {/* F2 — stato compilazione (chi manca) */}
+      {round.status !== 'draft' && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-sm font-medium text-neutral-700">Stato compilazione</h2>
+          {statusQuery.isLoading ? (
+            <LoadingSpinner />
+          ) : statusQuery.isError || !statusQuery.data ? (
+            <p className="text-sm text-miss">Errore nel caricamento dello stato.</p>
+          ) : (
+            <SubmissionStatus
+              players={statusQuery.data.players}
+              totalMatches={statusQuery.data.total_matches}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SubmissionStatus({
+  players,
+  totalMatches,
+}: {
+  players: PlayerSubmissionStatus[]
+  totalMatches: number
+}) {
+  const complete = players.filter((p) => totalMatches > 0 && p.matches_predicted >= totalMatches)
+  const partial = players.filter(
+    (p) => p.matches_predicted > 0 && p.matches_predicted < totalMatches,
+  )
+  const missing = players.filter((p) => p.matches_predicted === 0)
+
+  const Group = ({
+    title,
+    color,
+    items,
+    showCount,
+  }: {
+    title: string
+    color: string
+    items: PlayerSubmissionStatus[]
+    showCount?: boolean
+  }) => (
+    <div className="rounded-xl border bg-white p-3">
+      <div className={`mb-2 text-sm font-medium ${color}`}>
+        {title} ({items.length})
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-neutral-400">—</p>
+      ) : (
+        <ul className="grid gap-1 text-sm">
+          {items.map((p) => (
+            <li key={p.player_id} className="flex items-center justify-between">
+              <span>{p.username}</span>
+              {showCount && (
+                <span className="text-xs text-neutral-500">
+                  {p.matches_predicted}/{p.total_matches}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Group title="Completa" color="text-brand-600" items={complete} />
+      <Group title="Parziale" color="text-amber-700" items={partial} showCount />
+      <Group title="Manca" color="text-miss" items={missing} />
     </div>
   )
 }

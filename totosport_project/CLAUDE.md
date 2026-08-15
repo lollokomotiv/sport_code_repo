@@ -32,10 +32,15 @@ Questo vincola alcune scelte architetturali:
 
 ## 3. Stack tecnico — versioni esatte
 
+> ⚠️ **Aggiornato (Ago 2026).** Le versioni sotto riflettono lo stato reale del codice.
+> Deploy in **produzione**: frontend su **Vercel**, backend su **Render** (Docker), DB
+> **Postgres su Neon** (percorso gratuito; vedi `docs/development/11_deployment.md` e
+> `docs/OPERATIONS.md`). Lo scenario "self-host VPS + Nginx" resta come alternativa nei doc.
+
 ### Backend
 | Componente | Versione | Note |
 |---|---|---|
-| Python | 3.11 | f-strings, `match` statement, `tomllib` |
+| Python | 3.12 | f-strings, `match` statement, `tomllib` |
 | FastAPI | 0.111+ | async-first, Pydantic v2 |
 | SQLAlchemy | 2.0 | stile `async` con `asyncpg` |
 | Alembic | 1.13+ | migrazioni DB |
@@ -49,16 +54,17 @@ Questo vincola alcune scelte architetturali:
 ### Frontend
 | Componente | Versione | Note |
 |---|---|---|
-| Node.js | 20 LTS | |
-| React | 18 | concurrent features |
-| TypeScript | 5.x | strict mode abilitato |
-| Vite | 5.x | bundler |
+| Node.js | 20+ | |
+| React | 19 | concurrent features |
+| TypeScript | 5.x (strict) | strict mode abilitato |
+| Vite | 8.x | bundler |
 | Tailwind CSS | 3.x | utility-first |
-| React Router | 6.x | client-side routing |
+| React Router | 7.x | client-side routing |
 | Axios | 1.x | HTTP client con interceptors |
-| Zustand | 4.x | state management leggero (alternativa a Redux) |
+| Zustand | 5.x | state management leggero (con `persist` in localStorage) |
 | React Query (TanStack) | 5.x | server state, caching, refetch |
-| Vitest + Testing Library | latest | test |
+| react-markdown + remark-gfm + rehype-slug | — | pagina Regolamento |
+| PWA | — | manifest + service worker (installabile su HTTPS) |
 
 ### Infrastruttura
 | Componente | Versione | Note |
@@ -126,8 +132,13 @@ Il backend espone solo JSON API. Non esiste server-side rendering. Il frontend c
 ### 5.3 JWT stateless
 - **Access token**: 15 minuti
 - **Refresh token**: 7 giorni (ruotato ad ogni uso)
-- Entrambi trasportati via header `Authorization: Bearer` e cookie HttpOnly rispettivamente
-- Il frontend gestisce l'auto-refresh in Axios interceptors
+- **Stato reale**: entrambi i token stanno in **`localStorage`** (zustand `persist`) e viaggiano
+  nell'header `Authorization: Bearer`. **Niente cookie HttpOnly** (accettabile per un'app privata;
+  da rivedere se un domani si vuole più sicurezza). L'auth header-based rende il setup a domini
+  separati (Vercel ↔ Render) privo di problemi di cookie/CORS-credentials.
+- Il frontend gestisce l'auto-refresh negli interceptor Axios.
+- La cache di React Query viene **svuotata al login e al logout** per non mostrare a un utente i
+  dati (in cache) del precedente.
 
 ### 5.4 Scoring asincrono
 Lo scoring di una partita è scatenato quando l'admin salva il risultato finale (`PATCH /matches/{id}/result`). Non è un job in background: è sincrono sulla request. Con ~20 giocatori è assolutamente gestibile.
@@ -200,6 +211,20 @@ Il `Score` per ogni `(player, round)` deve tracciare queste componenti separatam
 ---
 
 ## 7. Modello dati corretto (supersede ARCHITECTURE.md)
+
+> ⚠️ **Delta rispetto allo schema qui sotto** (accumulati durante lo sviluppo — lo schema è
+> stato aggiornato dove più fuorviante, questi campi extra esistono nel codice):
+> - `User.is_active BOOLEAN` (soft-disable; l'admin può anche modificare email/password ed
+>   eliminare definitivamente un account).
+> - `Season.name` è **VARCHAR(30)** (non 10).
+> - `Match.competition ENUM` e `Match.requires_exact_score BOOLEAN` (l'admin sceglie per-partita
+>   dove serve il risultato esatto).
+> - `RoundPrediction.competition ENUM` + `UNIQUE (player_id, round_id, competition)` (totale gol
+>   **per lega**: Serie A e Serie B separate).
+> - `TablePrediction`: `mercato_penalty`, `late_compile_penalty` (int) e `mercato_baseline` (JSONB,
+>   snapshot dell'originale per calcolare le penalità); `total_points`/`points_breakdown`/`scored_at`.
+> - Le schedine di giornata degli **altri** sono leggibili solo a finestra chiusa (deadline superata
+>   o giornata `completed`) — regola server-side in `services/round.predictions_visible`.
 
 ```
 User
@@ -285,10 +310,10 @@ MatchPrediction  (una per giocatore per partita)
   id UUID PK
   player_id UUID FK → User
   match_id UUID FK → Match
-  predicted_home_goals SMALLINT NOT NULL
-  predicted_away_goals SMALLINT NOT NULL
-  -- sign derivato, NON salvato: derive_sign(predicted_home_goals, predicted_away_goals)
-  points_earned SMALLINT DEFAULT 0  -- calcolato dopo il risultato
+  predicted_sign VARCHAR(1) NOT NULL   -- '1'|'X'|'2', scelto ESPLICITAMENTE (vedi §6.1/§6.3)
+  predicted_home_goals SMALLINT        -- OPZIONALE: solo se Match.requires_exact_score
+  predicted_away_goals SMALLINT        -- OPZIONALE
+  points_earned SMALLINT DEFAULT 0     -- calcolato dopo il risultato
   submitted_at TIMESTAMP
   -- UNIQUE (player_id, match_id)
 
@@ -527,16 +552,16 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ---
 
-## 11. Punti aperti — decidere prima di implementare
+## 11. Punti aperti — stato
 
-| # | Questione | Impatto |
+| # | Questione | Stato |
 |---|---|---|
-| **A** | Un giocatore può cambiare la propria previsione dopo averla inviata, purché prima della deadline? | Schema `MatchPrediction` (upsert vs insert-only) |
-| **B** | Auto-chiusura delle giornate alla deadline (job schedulato) o manuale dall'admin? | Serve APScheduler o Celery se auto |
-| **C** | Auto-sync risultati da API-Football dopo il calcio d'inizio, o inserimento manuale? | Serve background task se auto |
-| **D** | Limite al numero di modifiche al tabellone per giocatore? | Schema `TablePredictionModification` |
-| **E** | Mobile: PWA responsive o app nativa con Capacitor? | Build pipeline frontend |
-| **F** | Il totale gol giornata è inserito prima o dopo aver visto le partite in programma? (impatta UX del form) | UX del form giornata |
+| **A** | Cambiare la propria previsione prima della deadline? | ✅ **Risolto**: `MatchPrediction`/`RoundPrediction` sono **upsert** (vale l'ultima, fino alla deadline). |
+| **B** | Auto-chiusura giornate alla deadline? | ⬜ **Manuale** dall'admin (nessuno scheduler). La deadline blocca comunque le previsioni lato server. |
+| **C** | Auto-sync risultati da API-Football? | ⬜ **Manuale** (Fase 7 non implementata). |
+| **D** | Limite modifiche al tabellone? | ✅ **Risolto** col modello penalità: −5 per voce diversa dall'originale (via `mercato_baseline`), +30 una-tantum per compilazione tardiva; nessun cap sul numero. |
+| **E** | Mobile: PWA o nativo? | ✅ **Risolto**: **PWA** installabile (manifest + service worker); nav mobile con hamburger. |
+| **F** | Totale gol prima/dopo aver visto le partite? | ✅ Il form mostra il totale gol **insieme** alle partite della giornata. |
 
 ---
 

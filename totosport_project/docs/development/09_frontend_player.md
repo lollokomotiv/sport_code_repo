@@ -111,6 +111,18 @@ stesso componente).
 
 ---
 
+### Schedine degli altri (dopo la deadline) — F1
+
+Nel dettaglio giornata, quando la **finestra è chiusa** (deadline superata o giornata
+`completed`), compare una sezione collassabile **"Schedine degli altri"**:
+- carica `GET /predictions/round/{id}` (403 prima della deadline → sezione non mostrata);
+- elenca ogni giocatore che ha compilato, con segno (+ risultato esatto dove previsto),
+  totale gol per lega e timestamp di invio.
+- **Integrità**: prima della deadline le altrui non sono richiedibili in alcun modo (blocco
+  server-side su ora del server; vedi `services/round.predictions_visible`).
+
+---
+
 ## Componenti condivisi
 
 - [ ] `CompetitionBadge` — chip colorato per Serie A / Serie B / Champions

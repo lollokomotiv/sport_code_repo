@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 
 import {
   getMyPredictions,
+  getRoundPredictionsView,
   submitMatchPrediction,
   submitRoundGoals,
   type MatchPredictionInput,
@@ -11,7 +12,7 @@ import {
 import { getRound } from '@/api/rounds'
 import CompetitionBadge from '@/components/CompetitionBadge'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import type { MatchPredictionOut, Sign } from '@/types/prediction'
+import type { MatchPredictionOut, PlayerPredictions, Sign } from '@/types/prediction'
 import type { Competition, MatchOut } from '@/types/round'
 import { formatCompetition, formatDate, isDeadlinePassed } from '@/utils'
 
@@ -34,9 +35,18 @@ export default function RoundDetail() {
   const [inputs, setInputs] = useState<Record<string, PredInput>>({})
   const [totals, setTotals] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
+  const [showOthers, setShowOthers] = useState(false)
 
   const round = roundQuery.data
   const preds = predQuery.data
+
+  // F1: schedine altrui — visibili solo a finestra chiusa (deadline superata o completata).
+  const windowClosed = !!round && (isDeadlinePassed(round.deadline) || round.status === 'completed')
+  const othersQuery = useQuery({
+    queryKey: ['round-others', id],
+    queryFn: () => getRoundPredictionsView(id),
+    enabled: windowClosed,
+  })
 
   const predByMatch = useMemo(() => {
     const map: Record<string, MatchPredictionOut> = {}
@@ -162,6 +172,31 @@ export default function RoundDetail() {
         ))}
       </div>
 
+      {windowClosed && (
+        <div className="mt-6">
+          <button
+            onClick={() => setShowOthers((s) => !s)}
+            className="rounded-lg border px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            {showOthers ? 'Nascondi le schedine degli altri' : 'Mostra le schedine degli altri'}
+          </button>
+          {showOthers && (
+            <div className="mt-3">
+              {othersQuery.isLoading ? (
+                <LoadingSpinner />
+              ) : othersQuery.isError ? (
+                <p className="text-sm text-miss">Errore nel caricamento delle schedine.</p>
+              ) : (
+                <OthersPredictions
+                  players={othersQuery.data?.players ?? []}
+                  matches={round.matches}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {!locked && (
         <div className="fixed inset-x-0 bottom-0 border-t bg-white px-3 pt-3 pb-safe">
           <div className="mx-auto flex max-w-5xl items-center justify-end gap-3 px-4">
@@ -263,6 +298,64 @@ function MatchRow({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function OthersPredictions({
+  players,
+  matches,
+}: {
+  players: PlayerPredictions[]
+  matches: MatchOut[]
+}) {
+  if (players.length === 0) {
+    return <p className="text-sm text-neutral-500">Nessun altro ha compilato la schedina.</p>
+  }
+  return (
+    <div className="grid gap-3">
+      {players.map((pl) => (
+        <div key={pl.player_id} className="rounded-xl border bg-white p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-medium">{pl.username}</span>
+            {pl.submitted_at && (
+              <span className="text-xs text-neutral-400">{formatDate(pl.submitted_at)}</span>
+            )}
+          </div>
+          <div className="grid gap-1 text-sm">
+            {matches.map((m) => {
+              const mp = pl.match_predictions.find((x) => x.match_id === m.id)
+              return (
+                <div key={m.id} className="flex items-center gap-2">
+                  <span className="flex-1 text-neutral-600">
+                    {m.home_team} <span className="text-neutral-400">vs</span> {m.away_team}
+                  </span>
+                  {mp ? (
+                    <>
+                      <span className="font-semibold">{mp.predicted_sign}</span>
+                      {mp.predicted_home_goals != null && mp.predicted_away_goals != null && (
+                        <span className="text-neutral-500">
+                          {mp.predicted_home_goals}-{mp.predicted_away_goals}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-neutral-300">—</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {pl.round_predictions.length > 0 && (
+            <div className="mt-2 text-xs text-neutral-500">
+              Totale gol:{' '}
+              {pl.round_predictions
+                .map((rp) => `${formatCompetition(rp.competition)} ${rp.total_goals_guess}`)
+                .join(' · ')}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }

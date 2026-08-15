@@ -3,6 +3,7 @@ import type {
   MatchPredictionOut,
   RoundPredictionOut,
   RoundPredictionsBundle,
+  RoundPredictionsView,
 } from '@/types/prediction'
 import type { Competition } from '@/types/round'
 
@@ -10,6 +11,12 @@ export async function getMyPredictions(roundId: string): Promise<RoundPrediction
   const { data } = await api.get<RoundPredictionsBundle>('/predictions/me', {
     params: { round_id: roundId },
   })
+  return data
+}
+
+/** F1: schedine di tutti i giocatori (403 prima della deadline). */
+export async function getRoundPredictionsView(roundId: string): Promise<RoundPredictionsView> {
+  const { data } = await api.get<RoundPredictionsView>(`/predictions/round/${roundId}`)
   return data
 }
 

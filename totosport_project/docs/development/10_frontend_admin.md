@@ -94,6 +94,18 @@ SERIE B
 
 ---
 
+### Cruscotto "chi manca" (stato compilazione) — F2
+
+Nel dettaglio giornata (da quando è `open` in poi) un pannello **"Stato compilazione"**:
+- carica `GET /admin/predictions/{id}/status` (aggiornamento ogni 30s);
+- divide i giocatori attivi in **Completa / Parziale / Manca** (con contatore X/N sui parziali);
+- **visibile anche prima della deadline** (serve a sollecitare chi manca) ma **senza mai** mostrare
+  il contenuto delle schedine — l'endpoint restituisce solo conteggi.
+- Il contenuto vero delle schedine resta accessibile all'admin **solo dopo la deadline**
+  (`GET /admin/predictions/{id}`, stessa regola `predictions_visible`).
+
+---
+
 ## Componenti admin-specific
 
 - [ ] `StatusTransitionButton` — bottone con modale di conferma per transizioni di stato
