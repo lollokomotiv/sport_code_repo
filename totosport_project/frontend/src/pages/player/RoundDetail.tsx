@@ -135,6 +135,32 @@ export default function RoundDetail() {
         )}
       </div>
 
+      {windowClosed && (
+        <div className="mb-4 rounded-xl border bg-white p-4">
+          <button
+            onClick={() => setShowOthers((s) => !s)}
+            className="flex w-full items-center justify-between text-sm font-medium text-brand-700"
+          >
+            <span>Schedine degli altri giocatori</span>
+            <span className="text-neutral-400">{showOthers ? '▲' : '▼'}</span>
+          </button>
+          {showOthers && (
+            <div className="mt-3">
+              {othersQuery.isLoading ? (
+                <LoadingSpinner />
+              ) : othersQuery.isError ? (
+                <p className="text-sm text-miss">Errore nel caricamento delle schedine.</p>
+              ) : (
+                <OthersPredictions
+                  players={othersQuery.data?.players ?? []}
+                  matches={round.matches}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {leaguesPresent.length > 0 && (
         <div className="mb-4 rounded-xl border bg-white p-4">
           <h2 className="mb-2 text-sm font-medium text-neutral-700">Totale gol giornata</h2>
@@ -171,31 +197,6 @@ export default function RoundDetail() {
           />
         ))}
       </div>
-
-      {windowClosed && (
-        <div className="mt-6">
-          <button
-            onClick={() => setShowOthers((s) => !s)}
-            className="rounded-lg border px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            {showOthers ? 'Nascondi le schedine degli altri' : 'Mostra le schedine degli altri'}
-          </button>
-          {showOthers && (
-            <div className="mt-3">
-              {othersQuery.isLoading ? (
-                <LoadingSpinner />
-              ) : othersQuery.isError ? (
-                <p className="text-sm text-miss">Errore nel caricamento delle schedine.</p>
-              ) : (
-                <OthersPredictions
-                  players={othersQuery.data?.players ?? []}
-                  matches={round.matches}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {!locked && (
         <div className="fixed inset-x-0 bottom-0 border-t bg-white px-3 pt-3 pb-safe">
