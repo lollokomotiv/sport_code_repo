@@ -14,7 +14,7 @@ import CompetitionBadge from '@/components/CompetitionBadge'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import type { MatchPredictionOut, PlayerPredictions, Sign } from '@/types/prediction'
 import type { Competition, MatchOut } from '@/types/round'
-import { formatCompetition, formatDate, isDeadlinePassed } from '@/utils'
+import { deriveSign, formatCompetition, formatDate, isDeadlinePassed } from '@/utils'
 
 interface PredInput {
   sign: '' | Sign
@@ -234,6 +234,23 @@ function MatchRow({
   showResults: boolean
   onChange: (patch: Partial<PredInput>) => void
 }) {
+  // Su una partita col risultato esatto, quando ci sono entrambi i gol il segno
+  // deve seguire il risultato (niente contrasti): lo derivo e blocco il menù.
+  const bothGoals = match.requires_exact_score && input.home !== '' && input.away !== ''
+  const signLocked = locked || bothGoals
+
+  function onGoal(side: 'home' | 'away', value: string) {
+    const home = side === 'home' ? value : input.home
+    const away = side === 'away' ? value : input.away
+    const patch: Partial<PredInput> = { [side]: value }
+    const h = Number(home)
+    const a = Number(away)
+    if (home !== '' && away !== '' && Number.isFinite(h) && Number.isFinite(a)) {
+      patch.sign = deriveSign(h, a)
+    }
+    onChange(patch)
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3">
       <div className="min-w-[160px] flex-1 text-sm">
@@ -247,11 +264,12 @@ function MatchRow({
         )}
       </div>
 
-      {/* Segno: sempre */}
+      {/* Segno: sempre scelto, ma sulle partite col risultato esatto segue i gol */}
       <select
-        disabled={locked}
+        disabled={signLocked}
         value={input.sign}
         onChange={(e) => onChange({ sign: e.target.value as '' | Sign })}
+        title={bothGoals ? 'Segno derivato dal risultato esatto' : undefined}
         className="rounded-lg border px-2 py-1 text-sm disabled:bg-neutral-100"
       >
         <option value="">Segno…</option>
@@ -269,7 +287,7 @@ function MatchRow({
             inputMode="numeric"
             disabled={locked}
             value={input.home}
-            onChange={(e) => onChange({ home: e.target.value })}
+            onChange={(e) => onGoal('home', e.target.value)}
             className="w-12 rounded-lg border px-2 py-1 text-center disabled:bg-neutral-100"
           />
           <span className="text-neutral-400">-</span>
@@ -277,7 +295,7 @@ function MatchRow({
             inputMode="numeric"
             disabled={locked}
             value={input.away}
-            onChange={(e) => onChange({ away: e.target.value })}
+            onChange={(e) => onGoal('away', e.target.value)}
             className="w-12 rounded-lg border px-2 py-1 text-center disabled:bg-neutral-100"
           />
         </div>
@@ -314,18 +332,35 @@ function OthersPredictions({
     return <p className="text-sm text-neutral-500">Nessun altro ha compilato la schedina.</p>
   }
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {players.map((pl) => (
-        <div key={pl.player_id} className="rounded-xl border bg-white p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="font-medium">{pl.username}</span>
-            {pl.submitted_at && (
-              <span className="text-xs text-neutral-400">{formatDate(pl.submitted_at)}</span>
-            )}
-          </div>
+        <PlayerSlip key={pl.player_id} player={pl} matches={matches} />
+      ))}
+    </div>
+  )
+}
+
+function PlayerSlip({ player, matches }: { player: PlayerPredictions; matches: MatchOut[] }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="overflow-hidden rounded-xl border bg-white">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm"
+      >
+        <span className="font-medium">{player.username}</span>
+        <span className="flex items-center gap-2">
+          {player.submitted_at && (
+            <span className="text-xs text-neutral-400">{formatDate(player.submitted_at)}</span>
+          )}
+          <span className="text-neutral-400">{open ? '▲' : '▼'}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="border-t px-3 py-2">
           <div className="grid gap-1 text-sm">
             {matches.map((m) => {
-              const mp = pl.match_predictions.find((x) => x.match_id === m.id)
+              const mp = player.match_predictions.find((x) => x.match_id === m.id)
               return (
                 <div key={m.id} className="flex items-center gap-2">
                   <span className="flex-1 text-neutral-600">
@@ -347,16 +382,16 @@ function OthersPredictions({
               )
             })}
           </div>
-          {pl.round_predictions.length > 0 && (
+          {player.round_predictions.length > 0 && (
             <div className="mt-2 text-xs text-neutral-500">
               Totale gol:{' '}
-              {pl.round_predictions
+              {player.round_predictions
                 .map((rp) => `${formatCompetition(rp.competition)} ${rp.total_goals_guess}`)
                 .join(' · ')}
             </div>
           )}
         </div>
-      ))}
+      )}
     </div>
   )
 }

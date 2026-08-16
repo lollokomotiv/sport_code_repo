@@ -163,6 +163,10 @@ Regola corretta:
 - Solo sulle **3-4 partite scelte dall'admin per giornata** si pronostica **anche il risultato
   esatto** (campo `Match.requires_exact_score = True`). Su queste si guadagna il bonus esatto;
   sulle altre il massimo è 1 pt (solo segno).
+- **Coerenza segno↔risultato** (Ago 2026): sulle partite col risultato esatto, quando il giocatore
+  indica **entrambi i gol**, il **segno deve coincidere** con `derive_sign(gol)`. Nel form il segno
+  viene derivato e bloccato; il backend rifiuta (400) una previsione incoerente
+  (`SignResultMismatch`). Sulle partite solo-segno il segno resta una scelta esplicita.
 
 Quindi un flag per-partita **esiste** (`requires_exact_score`), reintrodotto rispetto alla
 precedente nota "niente prediction_type". `derive_sign` resta in uso solo per calcolare il

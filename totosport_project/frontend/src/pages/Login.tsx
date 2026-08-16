@@ -47,7 +47,7 @@ export default function Login() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl border bg-white p-8 shadow-sm"
       >
-        <h1 className="mb-1 text-2xl font-bold text-brand-600">TotoSport</h1>
+        <h1 className="mb-1 text-2xl font-bold text-brand-600">Il TotoSport del Pres</h1>
         <p className="mb-6 text-sm text-neutral-500">Accedi al tuo account</p>
 
         <label className="mb-1 block text-sm font-medium" htmlFor="username">

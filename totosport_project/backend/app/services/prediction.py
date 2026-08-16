@@ -16,6 +16,7 @@ from app.models.match_prediction import MatchPrediction
 from app.models.round import Competition, Round, RoundStatus
 from app.models.round_prediction import RoundPrediction
 from app.models.user import User, UserRole
+from app.services.scoring import derive_sign
 
 
 def _max_dt(a: datetime | None, b: datetime | None) -> datetime | None:
@@ -47,6 +48,10 @@ class RoundNotFound(PredictionError):
 
 class CompetitionNotInRound(PredictionError):
     """Nessuna partita di quella lega nella giornata: niente totale gol."""
+
+
+class SignResultMismatch(PredictionError):
+    """Il segno scelto è in contrasto col risultato esatto indicato."""
 
 
 def _now() -> datetime:
@@ -85,8 +90,15 @@ async def submit_match_prediction(
     pred.predicted_sign = data["predicted_sign"]
     # Il risultato esatto conta solo sulle partite che lo richiedono; altrove lo ignoriamo
     if match.requires_exact_score:
-        pred.predicted_home_goals = data.get("predicted_home_goals")
-        pred.predicted_away_goals = data.get("predicted_away_goals")
+        home = data.get("predicted_home_goals")
+        away = data.get("predicted_away_goals")
+        # Coerenza: se è indicato il risultato esatto, il segno deve corrispondere.
+        if home is not None and away is not None and derive_sign(home, away) != data["predicted_sign"]:
+            raise SignResultMismatch(
+                "Il segno scelto non corrisponde al risultato esatto indicato"
+            )
+        pred.predicted_home_goals = home
+        pred.predicted_away_goals = away
     else:
         pred.predicted_home_goals = None
         pred.predicted_away_goals = None

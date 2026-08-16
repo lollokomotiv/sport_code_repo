@@ -116,6 +116,22 @@ async def test_submit_exact_match_keeps_goals(client: AsyncClient, admin, p1, se
     assert r.json()["predicted_home_goals"] == 2
 
 
+async def test_sign_must_match_exact_result(client: AsyncClient, admin, p1, season):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", True)])
+    # segno "1" ma risultato 0-2 (segno reale "2") → 400
+    r = await client.post(
+        "/predictions/match", headers=_auth(p1),
+        json={"match_id": m1, "predicted_sign": "1", "predicted_home_goals": 0, "predicted_away_goals": 2},
+    )
+    assert r.status_code == 400
+    # coerente → ok
+    r2 = await client.post(
+        "/predictions/match", headers=_auth(p1),
+        json={"match_id": m1, "predicted_sign": "2", "predicted_home_goals": 0, "predicted_away_goals": 2},
+    )
+    assert r2.status_code == 200
+
+
 async def test_match_prediction_is_upsert(client: AsyncClient, admin, p1, season):
     rid, [m1] = await _open_round_with_matches(client, admin, [("Inter", "Milan", "serie_a", False)])
     await client.post("/predictions/match", headers=_auth(p1), json={"match_id": m1, "predicted_sign": "1"})

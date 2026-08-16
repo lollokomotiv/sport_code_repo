@@ -20,6 +20,7 @@ from app.services.prediction import (
     MatchNotFound,
     PredictionsClosed,
     RoundNotFound,
+    SignResultMismatch,
     get_match_prediction_history,
     get_my_match_predictions,
     get_my_round_predictions,
@@ -44,6 +45,8 @@ async def submit_match(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except PredictionsClosed as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e))
+    except SignResultMismatch as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
     return MatchPredictionOut.model_validate(pred)
 
 

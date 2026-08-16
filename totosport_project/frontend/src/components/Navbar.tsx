@@ -29,7 +29,7 @@ export default function Navbar({ items }: { items: NavItem[] }) {
   return (
     <header className="border-b bg-white">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <span className="font-bold text-brand-600">TotoSport</span>
+        <span className="font-bold text-brand-600">Il TotoSport del Pres</span>
 
         {/* Desktop: voci + utente in linea */}
         <div className="hidden items-center gap-6 md:flex">
