@@ -17,6 +17,7 @@ from app.models.round import Competition, Round, RoundStatus
 from app.models.round_prediction import RoundPrediction
 from app.models.user import User, UserRole
 from app.services.scoring import derive_sign
+from app.services.season import get_current_season
 
 
 def _max_dt(a: datetime | None, b: datetime | None) -> datetime | None:
@@ -273,6 +274,17 @@ async def round_submission_status(round_id: uuid.UUID, db: AsyncSession) -> dict
         or 0
     )
 
+    # Quante leghe A/B sono presenti → quanti totali-gol servono per essere "completa"
+    league_rows = await db.execute(
+        select(Match.competition)
+        .where(
+            Match.round_id == round_id,
+            Match.competition.in_([Competition.serie_a, Competition.serie_b]),
+        )
+        .distinct()
+    )
+    leagues_expected = len(league_rows.scalars().all())
+
     mp_rows = await db.execute(
         select(
             MatchPrediction.player_id,
@@ -316,4 +328,94 @@ async def round_submission_status(round_id: uuid.UUID, db: AsyncSession) -> dict
                 "submitted_at": _max_dt(m_last, r_last),
             }
         )
-    return {"total_matches": total_matches, "players": out}
+    return {
+        "total_matches": total_matches,
+        "leagues_expected": leagues_expected,
+        "players": out,
+    }
+
+
+async def my_rounds_completion(player_id: uuid.UUID, db: AsyncSession) -> list[dict]:
+    """
+    Per ogni giornata visibile al giocatore (open/completed della stagione corrente),
+    lo stato di compilazione del giocatore: quante partite/totali ha fatto e se è
+    'completa' (tutte le partite + tutti i totali-gol delle leghe A/B presenti).
+    """
+    season = await get_current_season(db)
+    if season is None:
+        return []
+    rounds_res = await db.execute(
+        select(Round.id).where(
+            Round.season_id == season.id,
+            Round.status.in_([RoundStatus.open, RoundStatus.completed]),
+        )
+    )
+    round_ids = [r for r in rounds_res.scalars().all()]
+    if not round_ids:
+        return []
+
+    total_matches = {
+        rid: c
+        for rid, c in (
+            await db.execute(
+                select(Match.round_id, func.count())
+                .where(Match.round_id.in_(round_ids))
+                .group_by(Match.round_id)
+            )
+        ).all()
+    }
+    leagues: dict = {}
+    for rid, _comp in (
+        await db.execute(
+            select(Match.round_id, Match.competition)
+            .where(
+                Match.round_id.in_(round_ids),
+                Match.competition.in_([Competition.serie_a, Competition.serie_b]),
+            )
+            .distinct()
+        )
+    ).all():
+        leagues[rid] = leagues.get(rid, 0) + 1
+
+    my_matches = {
+        rid: c
+        for rid, c in (
+            await db.execute(
+                select(Match.round_id, func.count())
+                .join(MatchPrediction, MatchPrediction.match_id == Match.id)
+                .where(Match.round_id.in_(round_ids), MatchPrediction.player_id == player_id)
+                .group_by(Match.round_id)
+            )
+        ).all()
+    }
+    my_goals = {
+        rid: c
+        for rid, c in (
+            await db.execute(
+                select(RoundPrediction.round_id, func.count())
+                .where(
+                    RoundPrediction.round_id.in_(round_ids),
+                    RoundPrediction.player_id == player_id,
+                )
+                .group_by(RoundPrediction.round_id)
+            )
+        ).all()
+    }
+
+    out = []
+    for rid in round_ids:
+        tm = total_matches.get(rid, 0)
+        le = leagues.get(rid, 0)
+        mp = my_matches.get(rid, 0)
+        rg = my_goals.get(rid, 0)
+        out.append(
+            {
+                "round_id": rid,
+                "total_matches": tm,
+                "leagues_expected": le,
+                "matches_predicted": mp,
+                "round_goals_count": rg,
+                "complete": tm > 0 and mp >= tm and rg >= le,
+            }
+        )
+    return out

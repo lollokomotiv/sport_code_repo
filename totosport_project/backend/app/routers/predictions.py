@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.prediction import (
     MatchPredictionCreate,
     MatchPredictionOut,
+    MyRoundCompletion,
     PlayerPredictions,
     RoundPredictionCreate,
     RoundPredictionOut,
@@ -25,6 +26,7 @@ from app.services.prediction import (
     get_my_match_predictions,
     get_my_round_predictions,
     list_round_predictions_grouped,
+    my_rounds_completion,
     submit_match_prediction,
     submit_round_prediction,
 )
@@ -90,6 +92,16 @@ async def my_history(
 ) -> list[MatchPredictionOut]:
     preds = await get_match_prediction_history(current_user.id, db, limit=limit, offset=offset)
     return [MatchPredictionOut.model_validate(p) for p in preds]
+
+
+@router.get("/me/summary", response_model=list[MyRoundCompletion])
+async def my_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[MyRoundCompletion]:
+    """Stato di compilazione del giocatore per ogni giornata visibile (per i badge)."""
+    rows = await my_rounds_completion(current_user.id, db)
+    return [MyRoundCompletion.model_validate(r) for r in rows]
 
 
 @router.get("/round/{round_id}", response_model=RoundPredictionsView)

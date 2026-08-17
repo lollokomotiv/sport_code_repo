@@ -15,7 +15,13 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import OthersSlips from '@/components/OthersSlips'
 import type { MatchPredictionOut, Sign } from '@/types/prediction'
 import type { Competition, MatchOut } from '@/types/round'
-import { deriveSign, formatCompetition, formatDate, isDeadlinePassed } from '@/utils'
+import {
+  deriveSign,
+  formatCompetition,
+  formatDate,
+  groupByCompetition,
+  isDeadlinePassed,
+} from '@/utils'
 
 interface PredInput {
   sign: '' | Sign
@@ -182,19 +188,29 @@ export default function RoundDetail() {
         </div>
       )}
 
-      <div className="grid gap-2">
-        {round.matches.map((m) => (
-          <MatchRow
-            key={m.id}
-            match={m}
-            input={inputs[m.id] ?? EMPTY}
-            prediction={predByMatch[m.id]}
-            locked={locked}
-            showResults={showResults}
-            onChange={(patch) => update(m.id, patch)}
-          />
-        ))}
-      </div>
+      {groupByCompetition(round.matches).map((group) => (
+        <div key={group.competition} className="mb-3">
+          {/* Divisoria per campionato (solo se c'è più di una competizione) */}
+          {groupByCompetition(round.matches).length > 1 && (
+            <h2 className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              {formatCompetition(group.competition)}
+            </h2>
+          )}
+          <div className="grid gap-2">
+            {group.items.map((m) => (
+              <MatchRow
+                key={m.id}
+                match={m}
+                input={inputs[m.id] ?? EMPTY}
+                prediction={predByMatch[m.id]}
+                locked={locked}
+                showResults={showResults}
+                onChange={(patch) => update(m.id, patch)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {!locked && (
         <div className="fixed inset-x-0 bottom-0 border-t bg-white px-3 pt-3 pb-safe">

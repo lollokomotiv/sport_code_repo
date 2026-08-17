@@ -116,7 +116,19 @@ class PlayerSubmissionStatus(BaseModel):
 
 class RoundSubmissionStatus(BaseModel):
     total_matches: int
+    leagues_expected: int  # quanti totali-gol (leghe A/B presenti) servono per essere "completa"
     players: list[PlayerSubmissionStatus]
+
+
+class MyRoundCompletion(BaseModel):
+    """Stato di compilazione del giocatore per una singola giornata (per i badge)."""
+
+    round_id: uuid.UUID
+    total_matches: int
+    leagues_expected: int
+    matches_predicted: int
+    round_goals_count: int
+    complete: bool
 
 
 class RoundScoreOut(BaseModel):

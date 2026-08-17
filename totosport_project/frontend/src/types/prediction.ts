@@ -53,5 +53,15 @@ export interface PlayerSubmissionStatus {
 
 export interface RoundSubmissionStatus {
   total_matches: number
+  leagues_expected: number
   players: PlayerSubmissionStatus[]
+}
+
+export interface MyRoundCompletion {
+  round_id: string
+  total_matches: number
+  leagues_expected: number
+  matches_predicted: number
+  round_goals_count: number
+  complete: boolean
 }

@@ -1,6 +1,7 @@
 import api from '@/api/client'
 import type {
   MatchPredictionOut,
+  MyRoundCompletion,
   RoundPredictionOut,
   RoundPredictionsBundle,
   RoundPredictionsView,
@@ -11,6 +12,12 @@ export async function getMyPredictions(roundId: string): Promise<RoundPrediction
   const { data } = await api.get<RoundPredictionsBundle>('/predictions/me', {
     params: { round_id: roundId },
   })
+  return data
+}
+
+/** Stato di compilazione del giocatore per ogni giornata (per i badge in lista). */
+export async function getMyRoundsSummary(): Promise<MyRoundCompletion[]> {
+  const { data } = await api.get<MyRoundCompletion[]>('/predictions/me/summary')
   return data
 }
 

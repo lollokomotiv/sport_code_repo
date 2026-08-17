@@ -15,9 +15,10 @@ import { getRound } from '@/api/rounds'
 import CompetitionBadge from '@/components/CompetitionBadge'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import RoundStatusBadge from '@/components/RoundStatusBadge'
+import { teamsFor } from '@/data/teams'
 import type { PlayerSubmissionStatus } from '@/types/prediction'
 import type { Competition, MatchOut, RoundStatus } from '@/types/round'
-import { errorMessage, formatDate, fromDatetimeLocal } from '@/utils'
+import { errorMessage, formatCompetition, formatDate, fromDatetimeLocal, groupByCompetition } from '@/utils'
 
 const COMPETITIONS: Competition[] = ['serie_a', 'serie_b', 'champions_league']
 
@@ -133,17 +134,26 @@ export default function AdminRoundDetail() {
           Nessuna partita. {isDraft ? 'Aggiungine almeno una per poter aprire la giornata.' : ''}
         </p>
       ) : (
-        <div className="grid gap-2">
-          {round.matches.map((m) => (
-            <MatchRow
-              key={m.id}
-              match={m}
-              canDelete={isDraft}
-              canSetResult={isClosed}
-              onChanged={invalidate}
-            />
-          ))}
-        </div>
+        groupByCompetition(round.matches).map((group) => (
+          <div key={group.competition} className="mb-3">
+            {groupByCompetition(round.matches).length > 1 && (
+              <h3 className="mb-1 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                {formatCompetition(group.competition)}
+              </h3>
+            )}
+            <div className="grid gap-2">
+              {group.items.map((m) => (
+                <MatchRow
+                  key={m.id}
+                  match={m}
+                  canDelete={isDraft}
+                  canSetResult={isClosed}
+                  onChanged={invalidate}
+                />
+              ))}
+            </div>
+          </div>
+        ))
       )}
 
       {/* F2 — stato compilazione (chi manca) */}
@@ -158,6 +168,7 @@ export default function AdminRoundDetail() {
             <SubmissionStatus
               players={statusQuery.data.players}
               totalMatches={statusQuery.data.total_matches}
+              leaguesExpected={statusQuery.data.leagues_expected}
             />
           )}
         </div>
@@ -169,15 +180,20 @@ export default function AdminRoundDetail() {
 function SubmissionStatus({
   players,
   totalMatches,
+  leaguesExpected,
 }: {
   players: PlayerSubmissionStatus[]
   totalMatches: number
+  leaguesExpected: number
 }) {
-  const complete = players.filter((p) => totalMatches > 0 && p.matches_predicted >= totalMatches)
-  const partial = players.filter(
-    (p) => p.matches_predicted > 0 && p.matches_predicted < totalMatches,
-  )
-  const missing = players.filter((p) => p.matches_predicted === 0)
+  // "Completa" = tutte le partite pronosticate E tutti i totali-gol attesi (leghe A/B) inviati
+  const isComplete = (p: PlayerSubmissionStatus) =>
+    p.matches_predicted >= totalMatches && p.round_goals_count >= leaguesExpected
+  const hasSomething = (p: PlayerSubmissionStatus) =>
+    p.matches_predicted > 0 || p.round_goals_count > 0
+  const complete = players.filter((p) => totalMatches > 0 && isComplete(p))
+  const partial = players.filter((p) => hasSomething(p) && !isComplete(p))
+  const missing = players.filter((p) => !hasSomething(p))
 
   const Group = ({
     title,
@@ -204,6 +220,7 @@ function SubmissionStatus({
               {showCount && (
                 <span className="text-xs text-neutral-500">
                   {p.matches_predicted}/{p.total_matches}
+                  {leaguesExpected > 0 && ` · ${p.round_goals_count}/${leaguesExpected} tot`}
                 </span>
               )}
             </li>
@@ -262,11 +279,18 @@ function AddMatchForm({
   return (
     <div className="rounded-xl border bg-white p-4">
       <h2 className="mb-3 text-sm font-medium text-neutral-700">Aggiungi partita</h2>
+      {/* Suggerimenti squadre per la competizione scelta (si può digitare a mano). */}
+      <datalist id="team-suggestions">
+        {teamsFor(competition).map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-neutral-600">Casa</span>
           <input
             value={home}
+            list="team-suggestions"
             onChange={(e) => setHome(e.target.value)}
             className="rounded-lg border px-3 py-2"
           />
@@ -275,6 +299,7 @@ function AddMatchForm({
           <span className="text-neutral-600">Trasferta</span>
           <input
             value={away}
+            list="team-suggestions"
             onChange={(e) => setAway(e.target.value)}
             className="rounded-lg border px-3 py-2"
           />

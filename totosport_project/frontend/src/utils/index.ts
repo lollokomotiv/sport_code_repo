@@ -26,6 +26,24 @@ export function formatCompetition(comp: string): string {
   return COMPETITION_LABELS[comp] ?? comp
 }
 
+// Ordine di visualizzazione delle competizioni
+const COMPETITION_ORDER = ['serie_a', 'serie_b', 'champions_league', 'mixed']
+
+/** Raggruppa elementi per `competition`, nell'ordine Serie A → Serie B → Coppe. */
+export function groupByCompetition<T extends { competition: string }>(
+  items: T[],
+): { competition: string; items: T[] }[] {
+  const map = new Map<string, T[]>()
+  for (const it of items) {
+    const arr = map.get(it.competition) ?? []
+    arr.push(it)
+    map.set(it.competition, arr)
+  }
+  const known = COMPETITION_ORDER.filter((c) => map.has(c))
+  const extra = [...map.keys()].filter((c) => !COMPETITION_ORDER.includes(c))
+  return [...known, ...extra].map((c) => ({ competition: c, items: map.get(c)! }))
+}
+
 export function isDeadlinePassed(deadline: string | null): boolean {
   if (!deadline) return false
   return new Date(deadline).getTime() < Date.now()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import type { PlayerPredictions } from '@/types/prediction'
 import type { Competition, MatchOut } from '@/types/round'
-import { deriveSign, formatCompetition, formatDate } from '@/utils'
+import { deriveSign, formatCompetition, formatDate, groupByCompetition } from '@/utils'
 
 /**
  * Elenco delle schedine dei giocatori, ognuna un sotto-accordion (chiuso di default).
@@ -67,7 +67,14 @@ function PlayerSlip({
       {open && (
         <div className="border-t px-3 py-2">
           <div className="grid gap-1 text-sm">
-            {matches.map((m) => {
+            {groupByCompetition(matches).map((group) => (
+              <div key={group.competition} className="grid gap-1">
+                {groupByCompetition(matches).length > 1 && (
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    {formatCompetition(group.competition)}
+                  </div>
+                )}
+                {group.items.map((m) => {
               const mp = player.match_predictions.find((x) => x.match_id === m.id)
               const hasResult = m.actual_home_goals != null && m.actual_away_goals != null
               const showRes = withResults && hasResult
@@ -108,7 +115,9 @@ function PlayerSlip({
                   )}
                 </div>
               )
-            })}
+                })}
+              </div>
+            ))}
           </div>
           {player.round_predictions.length > 0 && (
             <div className="mt-2 text-xs text-neutral-500">

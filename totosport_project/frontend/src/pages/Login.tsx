@@ -14,6 +14,7 @@ export default function Login() {
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -65,15 +66,25 @@ export default function Login() {
         <label className="mb-1 block text-sm font-medium" htmlFor="password">
           Password
         </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          className="mb-4 w-full rounded-lg border px-3 py-2 outline-none focus:border-brand-500"
-          required
-        />
+        <div className="relative mb-4">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            className="w-full rounded-lg border px-3 py-2 pr-16 outline-none focus:border-brand-500"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((s) => !s)}
+            className="absolute inset-y-0 right-0 px-3 text-sm text-neutral-500 hover:text-neutral-800"
+            aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
+          >
+            {showPassword ? 'Nascondi' : 'Mostra'}
+          </button>
+        </div>
 
         {error && <p className="mb-4 text-sm text-miss">{error}</p>}
 

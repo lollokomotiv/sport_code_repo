@@ -20,6 +20,7 @@ export default function AdminPlayers() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['users'] })
 
@@ -68,11 +69,21 @@ export default function AdminPlayers() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-neutral-600">Password iniziale</span>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="rounded-lg border px-3 py-2"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 pr-16"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute inset-y-0 right-0 px-3 text-xs text-neutral-500 hover:text-neutral-800"
+                >
+                  {showPassword ? 'Nascondi' : 'Mostra'}
+                </button>
+              </div>
             </label>
           </div>
           <p className="mt-2 text-xs text-neutral-500">

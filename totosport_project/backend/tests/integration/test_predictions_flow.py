@@ -85,6 +85,35 @@ async def _open_round_with_matches(client, admin, matches, deadline=None):
     return rid, match_ids
 
 
+# ─── Stato compilazione del giocatore (badge "Completata") ────────────────────
+
+
+async def test_my_summary_completion(client: AsyncClient, admin, p1, season):
+    rid, [m1, m2] = await _open_round_with_matches(
+        client, admin, [("A", "B", "serie_a", False), ("C", "D", "serie_a", False)]
+    )
+    # p1 pronostica solo 1 partita su 2, nessun totale gol → non completa
+    await client.post("/predictions/match", headers=_auth(p1), json={"match_id": m1, "predicted_sign": "1"})
+    r = await client.get("/predictions/me/summary", headers=_auth(p1))
+    assert r.status_code == 200
+    entry = next(e for e in r.json() if e["round_id"] == rid)
+    assert entry["total_matches"] == 2
+    assert entry["leagues_expected"] == 1  # Serie A presente
+    assert entry["matches_predicted"] == 1
+    assert entry["complete"] is False
+
+    # completa: seconda partita + totale gol Serie A
+    await client.post("/predictions/match", headers=_auth(p1), json={"match_id": m2, "predicted_sign": "X"})
+    await client.post(
+        "/predictions/round-goals",
+        headers=_auth(p1),
+        json={"round_id": rid, "competition": "serie_a", "total_goals_guess": 3},
+    )
+    r2 = await client.get("/predictions/me/summary", headers=_auth(p1))
+    entry2 = next(e for e in r2.json() if e["round_id"] == rid)
+    assert entry2["complete"] is True
+
+
 # ─── Submit + lettura ────────────────────────────────────────────────────────
 
 
