@@ -1,16 +1,22 @@
 import { useState } from 'react'
 
 import type { PlayerPredictions } from '@/types/prediction'
-import type { MatchOut } from '@/types/round'
-import { formatCompetition, formatDate } from '@/utils'
+import type { Competition, MatchOut } from '@/types/round'
+import { deriveSign, formatCompetition, formatDate } from '@/utils'
 
-/** Elenco delle schedine dei giocatori, ognuna un sotto-accordion (chiuso di default). */
+/**
+ * Elenco delle schedine dei giocatori, ognuna un sotto-accordion (chiuso di default).
+ * Con `withResults` mostra il risultato reale a fianco e colora le previsioni
+ * (verde = giusto, rosso = sbagliato) — usato nel tab "Dettaglio" (giornate completate).
+ */
 export default function OthersSlips({
   players,
   matches,
+  withResults = false,
 }: {
   players: PlayerPredictions[]
   matches: MatchOut[]
+  withResults?: boolean
 }) {
   if (players.length === 0) {
     return <p className="text-sm text-neutral-500">Nessuno ha compilato la schedina.</p>
@@ -18,14 +24,32 @@ export default function OthersSlips({
   return (
     <div className="grid gap-2">
       {players.map((pl) => (
-        <PlayerSlip key={pl.player_id} player={pl} matches={matches} />
+        <PlayerSlip key={pl.player_id} player={pl} matches={matches} withResults={withResults} />
       ))}
     </div>
   )
 }
 
-function PlayerSlip({ player, matches }: { player: PlayerPredictions; matches: MatchOut[] }) {
+function PlayerSlip({
+  player,
+  matches,
+  withResults,
+}: {
+  player: PlayerPredictions
+  matches: MatchOut[]
+  withResults: boolean
+}) {
   const [open, setOpen] = useState(false)
+
+  // Totale gol reale per lega (per colorare il pronostico "totale gol")
+  function actualLeagueTotal(comp: Competition): number | null {
+    const ms = matches.filter(
+      (m) => m.competition === comp && m.actual_home_goals != null && m.actual_away_goals != null,
+    )
+    if (ms.length === 0) return null
+    return ms.reduce((s, m) => s + (m.actual_home_goals! + m.actual_away_goals!), 0)
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border bg-white">
       <button
@@ -45,6 +69,21 @@ function PlayerSlip({ player, matches }: { player: PlayerPredictions; matches: M
           <div className="grid gap-1 text-sm">
             {matches.map((m) => {
               const mp = player.match_predictions.find((x) => x.match_id === m.id)
+              const hasResult = m.actual_home_goals != null && m.actual_away_goals != null
+              const showRes = withResults && hasResult
+              const actualSign = hasResult
+                ? deriveSign(m.actual_home_goals!, m.actual_away_goals!)
+                : null
+              const signOk = mp != null && actualSign != null && mp.predicted_sign === actualSign
+              const exactOk =
+                mp != null &&
+                hasResult &&
+                mp.predicted_home_goals != null &&
+                mp.predicted_away_goals != null &&
+                mp.predicted_home_goals === m.actual_home_goals &&
+                mp.predicted_away_goals === m.actual_away_goals
+              const color = (ok: boolean) =>
+                showRes ? (ok ? 'text-brand-600' : 'text-miss') : ''
               return (
                 <div key={m.id} className="flex items-center gap-2">
                   <span className="flex-1 text-neutral-600">
@@ -52,15 +91,20 @@ function PlayerSlip({ player, matches }: { player: PlayerPredictions; matches: M
                   </span>
                   {mp ? (
                     <>
-                      <span className="font-semibold">{mp.predicted_sign}</span>
+                      <span className={`font-semibold ${color(signOk)}`}>{mp.predicted_sign}</span>
                       {mp.predicted_home_goals != null && mp.predicted_away_goals != null && (
-                        <span className="text-neutral-500">
+                        <span className={color(exactOk)}>
                           {mp.predicted_home_goals}-{mp.predicted_away_goals}
                         </span>
                       )}
                     </>
                   ) : (
                     <span className="text-neutral-300">—</span>
+                  )}
+                  {showRes && (
+                    <span className="text-xs text-neutral-400">
+                      · reale {m.actual_home_goals}-{m.actual_away_goals}
+                    </span>
                   )}
                 </div>
               )
@@ -69,9 +113,30 @@ function PlayerSlip({ player, matches }: { player: PlayerPredictions; matches: M
           {player.round_predictions.length > 0 && (
             <div className="mt-2 text-xs text-neutral-500">
               Totale gol:{' '}
-              {player.round_predictions
-                .map((rp) => `${formatCompetition(rp.competition)} ${rp.total_goals_guess}`)
-                .join(' · ')}
+              {player.round_predictions.map((rp, i) => {
+                const actual = actualLeagueTotal(rp.competition)
+                const ok = actual != null && rp.total_goals_guess === actual
+                return (
+                  <span key={rp.id}>
+                    {i > 0 && ' · '}
+                    {formatCompetition(rp.competition)}{' '}
+                    <span
+                      className={
+                        withResults && actual != null
+                          ? ok
+                            ? 'font-medium text-brand-600'
+                            : 'font-medium text-miss'
+                          : ''
+                      }
+                    >
+                      {rp.total_goals_guess}
+                    </span>
+                    {withResults && actual != null && (
+                      <span className="text-neutral-400"> (reale {actual})</span>
+                    )}
+                  </span>
+                )
+              })}
             </div>
           )}
         </div>

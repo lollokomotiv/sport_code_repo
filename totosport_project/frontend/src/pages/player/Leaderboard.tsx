@@ -292,6 +292,7 @@ function RoundDetailTab({ meId }: { meId?: string }) {
         <OthersSlips
           players={slipsQuery.data?.players ?? []}
           matches={roundQuery.data.matches}
+          withResults
         />
       )}
     </div>
