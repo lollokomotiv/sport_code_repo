@@ -48,7 +48,7 @@ class RoundCreate(BaseModel):
     name: str
     competition: Competition
     matchday: Optional[int] = None
-    deadline: Optional[datetime] = None
+    deadline: datetime  # obbligatoria: serve per poter aprire la giornata
 
 
 class RoundStatusUpdate(BaseModel):

@@ -35,7 +35,7 @@ export default function AdminRounds() {
   })
 
   function submit() {
-    if (!name.trim()) return
+    if (!name.trim() || !deadline) return
     create.mutate({
       name: name.trim(),
       competition,
@@ -92,13 +92,17 @@ export default function AdminRounds() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="text-neutral-600">Deadline (opz.)</span>
+              <span className="text-neutral-600">Deadline *</span>
               <input
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
+                required
                 className="rounded-lg border px-3 py-2"
               />
+              <span className="text-xs text-neutral-400">
+                Obbligatoria: serve per poter aprire la giornata.
+              </span>
             </label>
           </div>
           {create.isError && (
@@ -107,7 +111,7 @@ export default function AdminRounds() {
           <div className="mt-3 flex justify-end">
             <button
               onClick={submit}
-              disabled={create.isPending || !name.trim()}
+              disabled={create.isPending || !name.trim() || !deadline}
               className="rounded-lg bg-brand-600 px-6 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
             >
               {create.isPending ? 'Creazione…' : 'Crea giornata'}
