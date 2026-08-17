@@ -11,6 +11,18 @@ export interface LeaderboardEntry {
   season_bonus_total: number
 }
 
+// Classifica di una singola giornata (dettaglio punti)
+export interface RoundLeaderboardEntry {
+  rank: number
+  player_id: string
+  username: string
+  round_points: number
+  sign_points: number
+  exact_points: number
+  total_goals_points: number
+  weekend_bonus: number
+}
+
 // Classifiche "speciali" — conteggio (headline) + punti (dettaglio)
 export interface SpecialRankingEntry {
   rank: number
