@@ -57,10 +57,13 @@ interface MatchRowProps {
 
 ### `/player/leaderboard` — Classifica
 
-- Tabella con: posizione, nome giocatore, punti totali, segni, esatti+gol, tabellone
-- L'utente corrente evidenziato (sfondo diverso)
-- Tab per switchare tra: Classifica Generale | Classifica Segni | Pieni+Gol | Tabellone
-- Aggiornamento automatico ogni 30s (React Query `refetchInterval`)
+Tre tab (l'utente corrente è evidenziato ovunque; refresh automatico ogni 30s):
+- **Generale**: tabella con Totale, Segni, Pieni (pt), Gol, **Bonus Giornate**, Tabellone.
+- **Speciali**: tre mini-classifiche **a conteggio** (headline) con i punti come dettaglio —
+  **Segni / Pieni / Pieni 5+ gol** (`GET /leaderboard/special`).
+- **Dettaglio** (accento diverso, a destra): selettore giornata → breakdown punti della giornata
+  (`GET /leaderboard/rounds/{id}`) + le **schedine** dei giocatori con **risultato reale** a fianco
+  e colori **verde/rosso** su segno, risultato esatto e totale gol.
 
 ### `/player/tabellone` — Previsioni Annuali
 

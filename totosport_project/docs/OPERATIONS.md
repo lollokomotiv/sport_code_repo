@@ -90,6 +90,20 @@ UPDATE table_predictions
 DELETE FROM rounds WHERE id='<uuid-della-giornata>';
 ```
 
+**Pulire la stagione** (eliminare TUTTE le giornate di test → la classifica si ripulisce
+da sé, perché è ricalcolata dai RoundScore rimasti). Verifica sempre prima con la SELECT:
+```sql
+-- 1. controlla cosa stai per cancellare
+SELECT r.id, r.name, r.status FROM rounds r
+  JOIN seasons s ON s.id = r.season_id
+ WHERE s.status <> 'closed' ORDER BY r.created_at;
+-- 2. cancella tutte le giornate della stagione corrente
+DELETE FROM rounds
+ WHERE season_id = (SELECT id FROM seasons WHERE status <> 'closed' ORDER BY created_at DESC LIMIT 1);
+```
+Per azzerare anche i **tabelloni** di test: `DELETE FROM table_prediction_modifications ...` +
+`DELETE FROM table_predictions WHERE season_id = (...)` (i tabelloni non c'entrano con le giornate).
+
 **Vedere utenti / stagioni:**
 ```sql
 SELECT username, email, role, is_active FROM users ORDER BY username;

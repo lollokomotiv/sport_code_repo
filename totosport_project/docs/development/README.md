@@ -45,13 +45,18 @@ Leggi `CLAUDE.md` prima di iniziare qualsiasi fase.
 
 - Previsioni: **segno esplicito** su ogni partita + **risultato esatto** solo sulle partite flaggate dall'admin (`Match.requires_exact_score`).
 - Tabellone mercato: penalità **−5 a voce** calcolata rispetto all'**originale** (rimodificare la stessa voce o tornare indietro non accumula); **compilazione tardiva** ammessa con **−30** una tantum.
-- Classifica: colonne **Pieni / Gol / Weekend** separate.
+- Classifica: colonne separate; **"Weekend" rinominata "Bonus Giornate"**.
 - Fix cache cross-utente al login/logout.
 - Mobile: navbar con **hamburger**, input **no-zoom iOS**, **safe-area** barre fisse.
 - Pagina **Regolamento** (player + admin) che rende `docs/rules/REGOLAMENTO.md`.
 - Gestione account giocatori (admin): modifica email/password, attiva/disattiva, eliminazione definitiva.
 - **F1 — Schedine altrui dopo la deadline**: ogni utente autenticato vede le schedine di tutti gli altri **solo** a finestra chiusa (deadline superata o giornata completata); prima è bloccato lato server. Endpoint `GET /predictions/round/{id}`, sezione "Schedine degli altri" nel dettaglio giornata player.
 - **F2 — Cruscotto admin "chi manca"**: per ogni giornata l'admin vede i giocatori divisi in **Completa / Parziale / Manca** (solo conteggi, mai il contenuto). Endpoint `GET /admin/predictions/{id}/status`, pannello "Stato compilazione" nel dettaglio giornata admin.
+- **Classifiche speciali** (tab "Speciali"): a conteggio (con punti come dettaglio) — **Segni / Pieni / Pieni 5+ gol**, cumulativo di stagione sulle giornate completate. Endpoint `GET /leaderboard/special`.
+- **Tab "Dettaglio" classifica**: si sceglie una giornata → breakdown punti per giocatore (`GET /leaderboard/rounds/{id}`) + le **schedine** della giornata con **risultato reale a fianco** e colori **verde/rosso** (segno, esatto, totale gol). Componente schedine condiviso `OthersSlips` (accordion annidato per giocatore).
+- **Coerenza segno↔risultato esatto**: sulle partite col risultato esatto il segno segue i gol (derivato e bloccato nel form); il backend rifiuta previsioni incoerenti (`SignResultMismatch`, 400).
+- **Deadline giornata obbligatoria** alla creazione (schema `RoundCreate` + form) — evita di restare bloccati all'apertura.
+- Rinomina UI: il nome mostrato in alto è **"Il TotoSport del Pres"** (codebase/progetto restano `totosport`).
 
 > ⚠️ La pagina Regolamento usa una **copia** bundlata in `frontend/src/content/regolamento.md`
 > (senza la §9 "Note per il Coding Agent"). Va rigenerata se si modifica il regolamento sorgente.

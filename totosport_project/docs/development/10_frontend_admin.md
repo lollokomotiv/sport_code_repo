@@ -87,10 +87,12 @@ SERIE B
 
 ### `/admin/players` — Gestione Giocatori
 
-- Lista giocatori con: username, email, punti totali stagione, data registrazione
-- "Invita giocatore": crea account (`POST /auth/register`)
-- Click su giocatore → dettaglio con storico punti per giornata
-- Disable/enable account
+- Lista giocatori con: username, email, **stato** (attivo/disattivato).
+- **"Crea giocatore"**: crea account (`POST /auth/register`); nessuna mail — le credenziali si
+  comunicano a voce.
+- Per ogni giocatore (anche disattivato): **Modifica** (email + nuova password), **Attiva/Disattiva**,
+  **Elimina** (definitiva, con conferma). Tutto via `PATCH`/`DELETE /admin/users/{id}` — con guardia
+  che impedisce all'admin di disattivare/eliminare **sé stesso**.
 
 ---
 

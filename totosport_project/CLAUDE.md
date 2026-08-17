@@ -8,6 +8,10 @@ Guida operativa per sviluppare TotoSport. Leggila interamente prima di toccare i
 
 TotoSport è un gioco di pronostici calcistici per un gruppo di amici (circa 20 giocatori). Non è un prodotto SaaS: è un'applicazione **privata e closed**, con pochi utenti, gestita da un admin umano.
 
+> Nota: il **nome mostrato in-app** (barra in alto, login) è **"Il TotoSport del Pres"**; il nome
+> di codebase/progetto/repo resta `totosport`. In produzione gira su Vercel + Render + Neon
+> (vedi §3 e `docs/development/11_deployment.md`).
+
 Questo vincola alcune scelte architetturali:
 - La semplicità batte la scalabilità orizzontale
 - Un singolo admin umano gestisce le stagioni manualmente
