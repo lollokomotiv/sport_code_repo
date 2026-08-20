@@ -51,12 +51,17 @@ I dati di freeze frame (360) contengono le posizioni di tutti i giocatori visibi
 
 ### Approccio
 
-Due modelli LightGBM addestrati sulle stesse partite, con split a livello di partita (train 70% / validation 15% / holdout test 15%) per evitare data leakage:
+Due modelli di **regressione logistica** (`LogisticRegression`, solver `liblinear`) addestrati sulle stesse partite, con split a livello di partita (train 70% / validation 15% / holdout test 15%) per evitare data leakage:
 
 | Modello | Feature | Uso |
 |---|---|---|
 | **Baseline** | Geometria + contesto tiro | Riferimento senza dati 360 |
 | **360-enhanced** | Baseline + freeze frame | Produzione (consigliato) |
+
+> **Nota sullo stato del modello.** La regressione logistica è lineare nei log-odds: non cattura
+> né la curvatura della relazione distanza→probabilità né le interazioni tra le feature. Sul
+> confronto con `statsbomb_xg` (il benchmark incluso nei dati evento) il modello attuale
+> sovrastima in media e correla 0.61 — vedi [`plans/00-xg-calibrazione.md`](plans/00-xg-calibrazione.md).
 
 ### Feature utilizzate
 
@@ -134,7 +139,7 @@ Usa i match ID salvati in `models/holdout_match_ids.json` (2 partite riservate d
 pip install -r requirements.txt
 ```
 
-Dipendenze principali: `lightgbm`, `scikit-learn`, `pandas`, `numpy`, `matplotlib`, `joblib`.
+Dipendenze principali: `scikit-learn` (modelli xG), `lightgbm` (modello P_shot dell'xA), `pandas`, `numpy`, `matplotlib`, `mplsoccer`, `joblib`.
 
 ---
 

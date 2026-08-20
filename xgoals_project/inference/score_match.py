@@ -625,9 +625,10 @@ def _pass_meta(pass_data: dict) -> dict:
         "height":       pass_data.get("height", {}).get("name"),
         "body_part":    pass_data.get("body_part", {}).get("name"),
         "technique":    pass_data.get("technique", {}).get("name"),
-        "cross":        bool(pass_data.get("cross")),
-        "switch":       bool(pass_data.get("switch")),
-        "through_ball": bool(pass_data.get("through_ball")),
+        # int, non bool: SimpleImputer non accetta dtype bool
+        "cross":        int(bool(pass_data.get("cross"))),
+        "switch":       int(bool(pass_data.get("switch"))),
+        "through_ball": int(bool(pass_data.get("through_ball"))),
     }
 
 

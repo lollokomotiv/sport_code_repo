@@ -10,13 +10,13 @@ A collection of personal projects applying **Data Science, Data Engineering, and
 
 ### [xGoals Project](./xgoals_project/)
 
-**Domain:** Football | **Tech:** Python, LightGBM, StatsBomb Open Data, Jupyter
+**Domain:** Football | **Tech:** Python, scikit-learn, LightGBM, StatsBomb Open Data, Jupyter
 
 **Expected Goals (xG)** and **Expected Assists (xA)** models trained on StatsBomb open-source data, with 360° freeze frame data to measure defensive pressure and goalkeeper positioning at the moment of the shot.
 
 Includes a complete inference pipeline (`score_match.py`) to evaluate xG shot-by-shot on any StatsBomb match, with aggregated output per team.
 
-- Two LightGBM models: baseline (geometry) + 360-enhanced (player positioning)
+- Two logistic regression models: baseline (geometry) + 360-enhanced (player positioning)
 - Feature engineering on event and freeze frame data
 - Match-level train/validation/holdout split (no data leakage)
 - CLI for inference on a single match or holdout set
