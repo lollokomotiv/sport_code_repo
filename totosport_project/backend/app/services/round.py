@@ -19,15 +19,18 @@ from app.models.staged_fixture import StagedFixture
 from app.services.scoring import finalize_round, score_match_and_persist
 
 # Transizioni di stato ammesse
+# (closed → open = riapertura di una giornata chiusa per sbaglio, ammessa solo
+#  prima della deadline — vedi transition_status)
 ALLOWED_TRANSITIONS: dict[RoundStatus, set[RoundStatus]] = {
     RoundStatus.draft: {RoundStatus.open},
     RoundStatus.open: {RoundStatus.closed},
-    RoundStatus.closed: {RoundStatus.completed},
+    RoundStatus.closed: {RoundStatus.completed, RoundStatus.open},
     RoundStatus.completed: set(),
 }
 
-# Stati visibili ai giocatori (GET /rounds)
-PLAYER_VISIBLE_STATUSES = (RoundStatus.open, RoundStatus.completed)
+# Stati visibili ai giocatori (GET /rounds): anche 'closed' → resta consultabile
+# in sola lettura, così una giornata chiusa non "sparisce" dalla lista.
+PLAYER_VISIBLE_STATUSES = (RoundStatus.open, RoundStatus.closed, RoundStatus.completed)
 
 
 def predictions_visible(rnd: Round) -> bool:
@@ -149,6 +152,11 @@ async def transition_status(rnd: Round, new_status: RoundStatus, db: AsyncSessio
             raise RoundPreconditionError("La giornata deve avere almeno una partita per essere aperta")
         if rnd.deadline is None or rnd.deadline <= _now():
             raise RoundPreconditionError("La deadline deve essere impostata e nel futuro")
+
+    # Riapertura di una giornata chiusa per sbaglio: solo se la deadline non è passata
+    if rnd.status == RoundStatus.closed and new_status == RoundStatus.open:
+        if rnd.deadline is None or rnd.deadline <= _now():
+            raise RoundPreconditionError("Non puoi riaprire la giornata dopo la deadline")
 
     finalizing = rnd.status == RoundStatus.closed and new_status == RoundStatus.completed
     if finalizing:

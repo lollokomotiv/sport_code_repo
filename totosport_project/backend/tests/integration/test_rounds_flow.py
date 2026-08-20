@@ -130,19 +130,19 @@ async def test_duplicate_match_rejected(client: AsyncClient, admin, season):
     assert r.status_code == 409
 
 
-# ─── 5-6: chiusura e invisibilità al player ───────────────────────────────────
+# ─── 5-6: chiusura → resta visibile al player in sola lettura ─────────────────
 
 
-async def test_close_hides_from_player(client: AsyncClient, admin, player, season):
+async def test_closed_round_stays_visible_to_player(client: AsyncClient, admin, player, season):
     rid = await _create_round(client, admin)
     await _add_match(client, admin, rid, "Inter", "Milan")
     await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "open"})
     await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "closed"})
 
+    # closed è consultabile dal player (sola lettura lato UI), non più nascosto
     lst = await client.get("/rounds", headers=_auth(player))
-    assert rid not in [r_["id"] for r_ in lst.json()]
-    # il dettaglio per il player diventa 404
-    assert (await client.get(f"/rounds/{rid}", headers=_auth(player))).status_code == 404
+    assert rid in [r_["id"] for r_ in lst.json()]
+    assert (await client.get(f"/rounds/{rid}", headers=_auth(player))).status_code == 200
 
 
 # ─── 7: risultato + precondizioni di stato ────────────────────────────────────

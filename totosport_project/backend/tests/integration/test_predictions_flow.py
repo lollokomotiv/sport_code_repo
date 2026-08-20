@@ -412,3 +412,34 @@ async def test_special_rankings(client: AsyncClient, admin, p1, p2, season):
     assert seg["p1"]["count"] == 2
     assert seg["p2"]["count"] == 1
     assert seg["p1"]["rank"] == 1  # più segni → primo
+
+
+# ─── Giornata: riapertura closed→open + visibilità closed ai player ────────────
+
+
+async def test_reopen_closed_before_deadline(client: AsyncClient, admin, season):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("A", "B", "serie_a", False)])
+    await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "closed"})
+    r = await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "open"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "open"
+
+
+async def test_reopen_closed_after_deadline_rejected(client: AsyncClient, admin, season, db_session):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("A", "B", "serie_a", False)])
+    await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "closed"})
+    # sposta la deadline nel passato → non si può più riaprire
+    rnd = await db_session.get(Round, uuid.UUID(rid))
+    rnd.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    await db_session.commit()
+    r = await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "open"})
+    assert r.status_code == 409
+
+
+async def test_closed_round_visible_to_player(client: AsyncClient, admin, p1, season):
+    rid, [m1] = await _open_round_with_matches(client, admin, [("A", "B", "serie_a", False)])
+    await client.patch(f"/rounds/{rid}/status", headers=_auth(admin), json={"status": "closed"})
+    lst = await client.get("/rounds", headers=_auth(p1))
+    assert any(x["id"] == rid for x in lst.json())  # closed è nella lista del player
+    d = await client.get(f"/rounds/{rid}", headers=_auth(p1))
+    assert d.status_code == 200  # dettaglio accessibile (sola lettura lato UI)

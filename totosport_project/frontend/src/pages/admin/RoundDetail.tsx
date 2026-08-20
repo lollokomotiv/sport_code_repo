@@ -18,7 +18,14 @@ import RoundStatusBadge from '@/components/RoundStatusBadge'
 import { teamsFor } from '@/data/teams'
 import type { PlayerSubmissionStatus } from '@/types/prediction'
 import type { Competition, MatchOut, RoundStatus } from '@/types/round'
-import { errorMessage, formatCompetition, formatDate, fromDatetimeLocal, groupByCompetition } from '@/utils'
+import {
+  errorMessage,
+  formatCompetition,
+  formatDate,
+  fromDatetimeLocal,
+  groupByCompetition,
+  isDeadlinePassed,
+} from '@/utils'
 
 const COMPETITIONS: Competition[] = ['serie_a', 'serie_b', 'champions_league']
 
@@ -113,6 +120,23 @@ export default function AdminRoundDetail() {
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
             >
               {next.label}
+            </button>
+          )}
+          {/* Riapri: solo una giornata chiusa per sbaglio, prima della deadline */}
+          {round.status === 'closed' && !isDeadlinePassed(round.deadline) && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Riaprire la giornata? Tornerà modificabile dai giocatori fino alla deadline.',
+                  )
+                )
+                  statusMut.mutate('open')
+              }}
+              disabled={statusMut.isPending}
+              className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+            >
+              Riapri giornata
             </button>
           )}
           {isDraft && (
