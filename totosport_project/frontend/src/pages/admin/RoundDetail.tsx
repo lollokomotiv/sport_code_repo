@@ -90,7 +90,25 @@ export default function AdminRoundDetail() {
         <div className="ml-auto flex gap-2">
           {next && (
             <button
-              onClick={() => statusMut.mutate(next.to)}
+              onClick={() => {
+                // Conferma sui passaggi irreversibili/consequenziali
+                if (
+                  next.to === 'closed' &&
+                  !window.confirm(
+                    'Chiudere la giornata? I giocatori non potranno più modificare le previsioni. ' +
+                      'Fallo solo quando è ora di inserire i risultati.',
+                  )
+                )
+                  return
+                if (
+                  next.to === 'completed' &&
+                  !window.confirm(
+                    'Completare la giornata e calcolare i punti? Verranno assegnati i punteggi in classifica.',
+                  )
+                )
+                  return
+                statusMut.mutate(next.to)
+              }}
               disabled={statusMut.isPending}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
             >
