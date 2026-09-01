@@ -39,15 +39,25 @@ Prima ipotesi da verificare: in cella 24 `'is_goal'` viene impostato *prima* di 
 - [ ] Isolare la causa
 - [ ] Correggere e ri-verificare che il tasso goal sia ~10-12% dei tiri da key pass
 
-### 2. `our_xg` sovrastima di ~2x rispetto a `statsbomb_xg` 🟠
+### 2. `extract_shot_features` calcola feature diverse dal training xG 🔴
 
-`our_xg` medio 0.1611 vs `statsbomb_xg` medio 0.0800, correlazione 0.6147. Un modello xG sano dovrebbe stare vicino al benchmark in media e correlare ben oltre 0.8.
+**Causa identificata (2026-08-20).** La sovrastima di `our_xg` (0.1611 vs 0.0800 di StatsBomb) non veniva dal modello xG — che è sano — ma da questa funzione. Su 554 tiri, le stesse feature calcolate da `score_match.py` danno media 0.0981 e correlazione 0.8508; calcolate qui danno 0.1796 e 0.7122.
 
-Da indagare: `class_weight='balanced'` nel training del modello xG gonfierebbe sistematicamente le probabilità; oppure disallineamento tra le feature calcolate qui e quelle del training xG.
+**a) Formula dell'angolo invertita** — diverge sul 99,1% dei tiri:
+```python
+# sbagliato (qui):     atan2(W * abs(y - GOAL_Y), den)
+# corretto (standard): atan2(W * abs(x - GOAL_X), den)
+```
+L'angolo risulta 0 — il peggiore — per i tiri centrali, e massimo per quelli defilati.
 
-- [ ] Confrontare feature per feature le due pipeline su uno stesso set di tiri
-- [ ] Verificare `class_weight` del modello xG salvato
-- [ ] Se serve, ricalibrare (Platt/isotonic) e ri-valutare
+**b) Convenzione dei flag binari** — diverge sul 100% delle righe. Training e inferenza passano `True`/`None` (l'imputer riempie con la mediana); qui si passa `0.0`/`1.0`.
+
+**c) Feature 360 minori** — qui il portiere è escluso dagli "opponents" e il cono verso la porta include entrambe le squadre.
+
+- [ ] **Eliminare la funzione e importare quella di `score_match.py`**, invece di correggerla: è la terza volta che le copie divergono (vedi piano 00, step 0)
+- [ ] Rieseguire il notebook e verificare che `our_xg` torni ~0.10
+
+> ⚠️ La stessa formula sbagliata dell'angolo è in `geometry_features` (cella 10) come `receiver_angle_goal`, feature del modello P_shot. Lì training e inferenza sono coerenti fra loro, quindi non è un bug bloccante — ma è una feature che misura il contrario di quel che dovrebbe, e correggerla dovrebbe migliorare il P_shot.
 
 ### 3. `zone_xg_lookup`: convenzione dei bin incoerente 🟠
 

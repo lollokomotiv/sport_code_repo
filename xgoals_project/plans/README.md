@@ -13,7 +13,7 @@ Piani di lavoro del progetto xGoals. Un file per filone, numerato per ordine di 
 
 | Piano | Stato | Sintesi |
 |---|---|---|
-| [00 — Calibrazione xG](00-xg-calibrazione.md) | 🔴 Prioritario | Il modello xG sovrastima 2x e correla 0.61 con StatsBomb: prerequisito di tutto |
-| [01 — Completamento xA](01-xa-completamento.md) | 🟡 In corso | Modello xA addestrato, ma con bug aperti da chiudere prima delle viz |
+| [00 — Modello xG](00-xg-calibrazione.md) | 🟡 Calibrato, poco discriminante | Centrato sul benchmark, ma AUC 0.79 su test e valore dei dati 360 non dimostrato. Serve più dati |
+| [01 — Completamento xA](01-xa-completamento.md) | 🔴 Prioritario | Bug nella feature engineering dei tiri (angolo invertito): da chiudere prima delle viz |
 | [02 — Metriche avanzate](02-metriche-avanzate.md) | ⚪ Da iniziare | Nuovi modelli su dati esistenti (possession value, ecc.) |
 | [03 — Webapp](03-webapp.md) | ⚪ Da iniziare | Interfaccia per generare le visualizzazioni da dati StatsBomb |

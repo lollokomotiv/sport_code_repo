@@ -58,10 +58,12 @@ Due modelli di **regressione logistica** (`LogisticRegression`, solver `liblinea
 | **Baseline** | Geometria + contesto tiro | Riferimento senza dati 360 |
 | **360-enhanced** | Baseline + freeze frame | Produzione (consigliato) |
 
-> **Nota sullo stato del modello.** La regressione logistica è lineare nei log-odds: non cattura
-> né la curvatura della relazione distanza→probabilità né le interazioni tra le feature. Sul
-> confronto con `statsbomb_xg` (il benchmark incluso nei dati evento) il modello attuale
-> sovrastima in media e correla 0.61 — vedi [`plans/00-xg-calibrazione.md`](plans/00-xg-calibrazione.md).
+> **Stato del modello.** Su un campione di 554 tiri il modello produce xG medio 0.098, contro
+> 0.101 di `statsbomb_xg` (il benchmark incluso nei dati evento) e un tasso di gol reale del 9,0%:
+> è centrato. La correlazione di Pearson con StatsBomb è 0.85. Il campione include match di
+> training, quindi **non è una valutazione su holdout** — quella è in
+> [`plans/00-xg-calibrazione.md`](plans/00-xg-calibrazione.md), insieme ai margini di miglioramento
+> noti (dati di training limitati a 326 match su 3.464 disponibili, forma lineare nei log-odds).
 
 ### Feature utilizzate
 
