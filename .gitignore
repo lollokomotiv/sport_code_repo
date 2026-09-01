@@ -17,3 +17,6 @@ venv/
 
 # Model files (large binaries — opzionale, rimuovi se vuoi versionarli)
 # *.joblib
+
+# Dataset generati (rigenerabili con psxg/build_dataset.py)
+xgoals_project/datasets/
