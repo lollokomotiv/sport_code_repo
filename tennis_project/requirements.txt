@@ -1,0 +1,11 @@
+# Base comune a tutte le analisi di tennis_project.
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+jupyterlab>=4.0
+
+# Lettura dei file .xlsx di tennis-data.co.uk
+openpyxl>=3.1
+
+# Serve solo alle analisi che modellano; commenta se non ti serve.
+scikit-learn>=1.3

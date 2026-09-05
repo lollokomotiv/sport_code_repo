@@ -1,0 +1,23 @@
+# Dati grezzi e derivati: rigenerabili con lib/download.py, non si versionano
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+
+# Output pesanti delle analisi
+*.parquet
+*.joblib
+*.pkl
+models/
+figures/**/*.png
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Ambiente / OS
+.env
+.DS_Store

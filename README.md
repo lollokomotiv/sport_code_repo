@@ -23,6 +23,21 @@ Includes a complete inference pipeline (`score_match.py`) to evaluate xG shot-by
 
 ---
 
+### [Tennis Workspace](./tennis_project/)
+
+**Domain:** Tennis | **Tech:** Python, pandas, Match Charting Project, tennis-data.co.uk
+
+Not a single project but a **workspace for independent tennis analyses**, sharing one
+download/loading layer and one data folder. Each study under `analyses/` asks a single
+question and states its own limitations.
+
+- Shared library: data download (CLI), loading, normalisation and serve/return metrics
+- Two verified open sources — shot-by-shot annotated matches, and full-tour results with
+  bookmaker odds — after the field's standard dataset (`JeffSackmann/tennis_atp`) went offline
+- Data-quality handling built in: malformed upstream rows are dropped loudly, never silently
+
+---
+
 ### [Snooker Project](./snooker_project/)
 
 **Domain:** Snooker | **Tech:** Python, pandas, Jupyter
