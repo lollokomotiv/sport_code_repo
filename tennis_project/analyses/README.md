@@ -13,7 +13,8 @@ nessuna reimplementa un caricamento che esiste già.
 
 | Cartella | Domanda | Fonte | Stato |
 |---|---|---|---|
-| _(nessuna analisi ancora)_ | | | |
+| [alcaraz-paul-h2h/](alcaraz-paul-h2h/) | Dove si è deciso il confronto diretto Alcaraz-Paul | Match Charting Project | In corso |
+| [alcaraz-paul-smorzate/](alcaraz-paul-smorzate/) | Alcaraz gioca meno smorzate contro Paul? (no; l'unico effetto solido è che sale meno a rete) | Match Charting Project | Conclusa |
 
 > Aggiorna questa tabella quando ne inizi una. Un'analisi che nessuno trova non
 > esiste, e l'indice è l'unica cosa che qualcuno legge davvero.

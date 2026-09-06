@@ -4,12 +4,17 @@ Due fonti (dettagli e limiti in docs/fonti-dati.md):
 
   mcp  — Match Charting Project (github.com/JeffSackmann/tennis_MatchChartingProject):
          punto per punto e colpo per colpo, ~7.500 match maschili e ~3.000 femminili.
+  tml  — TennisMyLife (stats.tennismylife.org): risultati e statistiche di match
+         ufficiali di tutto il circuito dal 1968, un CSV per stagione. Stesso
+         schema del vecchio JeffSackmann/tennis_atp, che non è più pubblico.
   td   — tennis-data.co.uk: risultati di tutti i match del circuito dal 2000 con
          quote dei bookmaker, un file .xlsx per stagione e per tour.
 
 CLI:
     python3 -m lib.download mcp --gender m                  # matches + stats
     python3 -m lib.download mcp --gender m --points         # + punto per punto (pesante)
+    python3 -m lib.download tml --tour atp                  # tutte le stagioni
+    python3 -m lib.download tml --tour wta --from 2015
     python3 -m lib.download td  --tour atp --from 2015 --to 2025
 """
 
@@ -24,6 +29,12 @@ from .paths import RAW_DIR
 
 MCP_BASE = "https://raw.githubusercontent.com/JeffSackmann/tennis_MatchChartingProject/master"
 TD_BASE = "http://www.tennis-data.co.uk"
+TML_BASE = "https://stats.tennismylife.org/data"
+
+# Come si chiamano i file di TennisMyLife: l'ATP principale è "<anno>.csv",
+# gli altri circuiti hanno un suffisso.
+TML_SUFFIX = {"atp": "", "wta": "_wta", "challenger": "_challenger"}
+TML_FIRST_YEAR = {"atp": 1968, "wta": 1968, "challenger": 1978}
 
 # I file di statistiche aggregate del MCP, per genere ("m" o "w").
 MCP_STATS = [
@@ -116,6 +127,38 @@ def download_tennis_data(tour: str = "atp", year_from: int = 2015, year_to: int 
     return written
 
 
+# ------------------------------------------------------------------ TennisMyLife
+
+def download_tml(tour: str = "atp", year_from: int | None = None,
+                 year_to: int = 2026, overwrite: bool = False) -> list[Path]:
+    """Scarica un CSV per stagione da TennisMyLife.
+
+    Lo schema è quello di Sackmann: una riga per match, colonne `winner_*` /
+    `loser_*` e le statistiche di servizio `w_*` / `l_*`.
+
+    Non si usa il comando "scarica tutto" suggerito dal sito: la sua API elenca
+    anche 31 file di backup interni (`backup_ll_audit_*`), che sono duplicati
+    delle stagioni e non vanno mescolati ai dati buoni.
+    """
+    if tour not in TML_SUFFIX:
+        raise ValueError(f"tour deve essere uno di {tuple(TML_SUFFIX)}, ricevuto {tour!r}")
+    if year_from is None:
+        year_from = TML_FIRST_YEAR[tour]
+    if year_from < TML_FIRST_YEAR[tour]:
+        raise ValueError(f"prima stagione disponibile per {tour}: {TML_FIRST_YEAR[tour]}")
+
+    out = RAW_DIR / "tml" / tour
+    print(f"TennisMyLife {tour.upper()} {year_from}-{year_to} → {out}")
+
+    written = []
+    for year in range(year_from, year_to + 1):
+        name = f"{year}{TML_SUFFIX[tour]}.csv"
+        path = _save(f"{TML_BASE}/{name}", out / f"{year}.csv", overwrite)
+        if path:
+            written.append(path)
+    return written
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Scarica dati tennis in data/raw/")
     sub = p.add_subparsers(dest="source", required=True)
@@ -126,6 +169,13 @@ def main() -> None:
     mcp.add_argument("--no-stats", action="store_true", help="solo l'elenco match")
     mcp.add_argument("--overwrite", action="store_true")
 
+    tml = sub.add_parser("tml", help="TennisMyLife (risultati + statistiche ufficiali)")
+    tml.add_argument("--tour", default="atp", choices=list(TML_SUFFIX))
+    tml.add_argument("--from", dest="year_from", type=int, default=None,
+                     help="default: la prima stagione disponibile")
+    tml.add_argument("--to", dest="year_to", type=int, default=2026)
+    tml.add_argument("--overwrite", action="store_true")
+
     td = sub.add_parser("td", help="tennis-data.co.uk (risultati + quote)")
     td.add_argument("--tour", default="atp", choices=["atp", "wta"])
     td.add_argument("--from", dest="year_from", type=int, default=2015)
@@ -135,6 +185,8 @@ def main() -> None:
     args = p.parse_args()
     if args.source == "mcp":
         download_mcp(args.gender, points=args.points, stats=not args.no_stats, overwrite=args.overwrite)
+    elif args.source == "tml":
+        download_tml(args.tour, args.year_from, args.year_to, args.overwrite)
     else:
         if args.year_to < args.year_from:
             raise SystemExit("--to deve essere >= --from")

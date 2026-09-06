@@ -8,7 +8,15 @@ data/processed/*
 *.joblib
 *.pkl
 models/
-figures/**/*.png
+
+# Immagini: ignorate di default, tranne i grafici delle analisi concluse.
+# Quelli si versionano — sono il risultato visibile del lavoro, pesano decine di
+# KB, e senza di loro i README delle analisi mostrano link rotti su GitHub.
+*.png
+*.jpg
+*.svg
+!analyses/**/figures/*.png
+!analyses/**/figures/*.svg
 
 # Python
 __pycache__/

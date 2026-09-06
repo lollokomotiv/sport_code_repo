@@ -7,5 +7,8 @@ jupyterlab>=4.0
 # Lettura dei file .xlsx di tennis-data.co.uk
 openpyxl>=3.1
 
+# Formato dei dataset in data/processed/
+pyarrow>=14.0
+
 # Serve solo alle analisi che modellano; commenta se non ti serve.
 scikit-learn>=1.3

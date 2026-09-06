@@ -5,33 +5,26 @@ fidarsi di questa pagina, ricontrolla che i download funzionino ancora.
 
 ---
 
-## Premessa: il dataset standard non è più disponibile
+## Premessa: il dataset standard è sparito, ma esiste un sostituto
 
 Per anni il riferimento per i dati tennis sono stati i repo di Jeff Sackmann
-`JeffSackmann/tennis_atp` e `JeffSackmann/tennis_wta`: risultati di tutti i
-match dal 1968, statistiche di servizio dal 1991, ranking settimanali,
-anagrafica giocatori. Quasi tutti i tutorial e i paper open citano quelli.
+`JeffSackmann/tennis_atp` e `tennis_wta`: risultati di tutti i match dal 1968,
+statistiche di servizio dal 1991, ranking, anagrafica. Quasi tutti i tutorial e
+i paper open citano quelli.
 
 **Oggi rispondono 404.** Dell'account resta pubblico il solo
-`tennis_MatchChartingProject`. Non è chiaro se sia una rimozione temporanea o
-definitiva.
+`tennis_MatchChartingProject`.
 
-Conseguenze pratiche:
+Il ruolo che occupavano è però coperto da **TennisMyLife** (sezione 2), che
+pubblica lo stesso schema colonna per colonna, aggiornato quotidianamente. Resta
+vero che:
 
-- codice ed esempi trovati online che scaricano `atp_matches_<anno>.csv` da
-  quel repo **non funzionano più**;
-- esistono fork di terzi, ma sono cristallizzati all'anno del fork e senza
-  garanzia di integrità: usabili per un esperimento, non da citare come fonte;
-- le **statistiche di servizio su tutto il circuito** (ace, punti al servizio,
-  palle break per ogni match ATP) al momento non hanno un sostituto open
-  equivalente. Chi ne ha bisogno deve accettare la copertura parziale del
-  Match Charting Project o passare a una fonte a pagamento.
+- codice ed esempi trovati online che scaricano `atp_matches_<anno>.csv` da quel
+  repo **non funzionano più**: vanno ripuntati, non adattati;
+- i fork di terzi sono cristallizzati all'anno del fork e senza garanzia di
+  integrità: usabili per un esperimento, non da citare come fonte.
 
-Questo limite va dichiarato nei risultati, non aggirato in silenzio.
-
----
-
-## 1. Match Charting Project — *fonte primaria*
+## 1. Match Charting Project — *il dettaglio del gioco*
 
 `github.com/JeffSackmann/tennis_MatchChartingProject` · licenza CC BY-NC-SA 4.0
 
@@ -79,7 +72,55 @@ solo i totali.
 
 ---
 
-## 2. tennis-data.co.uk — *copertura completa + quote*
+## 2. TennisMyLife — *statistiche ufficiali di tutto il circuito*
+
+`stats.tennismylife.org/tennis-match-database` · licenza **MIT**, uso libero
+
+Un CSV per stagione con **tutti i match del circuito dal 1968**, statistiche di
+servizio incluse. È il sostituto operativo del `tennis_atp` di Sackmann: schema
+identico, più una colonna `indoor` e i livelli torneo separati in `250`/`500`
+invece del generico `A`.
+
+```bash
+python3 -m lib.download tml --tour atp        # tutte le stagioni (~35 MB)
+python3 -m lib.download tml --tour wta
+python3 -m lib.download tml --tour challenger
+```
+
+Contenuto (verificato oggi): **200.058 match ATP** dal 1968 al 30/08/2026, con
+`w_ace`, `w_df`, `w_svpt`, `w_1stIn`, `w_1stWon`, `w_2ndWon`, `w_SvGms`,
+`w_bpSaved`, `w_bpFaced` e i corrispettivi `l_*`. Il **94,9%** dei match ha le
+statistiche di servizio, il 92,8% i minuti. Ci sono anche WTA, Challenger,
+qualificazioni, ranking e i tornei in corso aggiornati in tempo reale.
+
+**Attendibilità.** Incrociando le sue statistiche con quelle annotate a mano dal
+MCP sugli stessi match (Alcaraz-Paul, 10 righe giocatore-match):
+
+| | righe identiche | scarto massimo |
+|---|---|---|
+| punti al servizio | 10/10 | 0 |
+| doppi falli | 10/10 | 0 |
+| prime in campo | 9/10 | 1 |
+| punti vinti con 1ª e 2ª | 9/10 | 1 |
+| ace | 8/10 | 1 |
+
+Due fonti indipendenti coincidono al 100% sulle quantità oggettive. Gli scarti
+da 1 riguardano solo ciò che richiede un giudizio (ace o vincente di servizio?).
+Il controllo copre 10 righe: prima di appoggiarci un lavoro pubblicabile va
+esteso.
+
+**Limiti:**
+
+- `tourney_date` è la data di **inizio del torneo**, non del match: un join per
+  data esatta con il MCP fallisce, serve una finestra (vedi `link_mcp_to_tml`);
+- **provenienza a fornitore singolo**, senza processo pubblico di verifica: è il
+  lavoro di una persona, dichiarato affidabile e finora confermato dai controlli;
+- l'API elenca anche **31 file di backup interni** (`backup_ll_audit_*`), che
+  sono duplicati delle stagioni. Il comando "scarica tutto" suggerito dal sito
+  se li porta dietro: `lib.download` non li tocca;
+- niente dettaglio dentro il punto: per quello serve il MCP.
+
+## 3. tennis-data.co.uk — *quote dei bookmaker*
 
 `www.tennis-data.co.uk` · un file `.xlsx` per stagione e per tour
 
@@ -112,7 +153,7 @@ più le quote `B365W/L`, `PSW/L` (Pinnacle), `MaxW/L`, `AvgW/L`.
 
 ---
 
-## 3. Altre piste, non ancora usate
+## 4. Altre piste, non ancora usate
 
 | Fonte | Cosa dà | Perché non è (ancora) qui |
 |---|---|---|
