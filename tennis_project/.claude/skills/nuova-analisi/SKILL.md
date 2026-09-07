@@ -1,6 +1,12 @@
 ---
 name: nuova-analisi
-description: Avvia e conduce una nuova analisi sui dati tennis in tennis_project. Usare quando l'utente propone un confronto tra due giocatori ("Alcaraz contro Sinner", "come se la giocano X e Y"), chiede di verificare una tesi sui dati, dice "nuova analisi", "analizziamo", "vediamo se", "mi interessa capire", oppure nomina due tennisti insieme. Copre il flusso completo: copertura del campione, verifica della tesi, script, grafico, README dell'analisi.
+description: >-
+  Avvia e conduce una nuova analisi sui dati tennis in tennis_project. Usare
+  quando l'utente propone un confronto tra due giocatori ("Alcaraz contro
+  Sinner", "come se la giocano X e Y"), chiede di verificare una tesi sui dati,
+  dice "nuova analisi", "analizziamo", "vediamo se", "mi interessa capire",
+  oppure nomina due tennisti insieme. Copre il flusso completo — copertura del
+  campione, verifica della tesi, script, grafico, README dell'analisi.
 ---
 
 # Nuova analisi
@@ -50,19 +56,22 @@ distorto: dillo subito e quantificalo. Esempio reale da `analyses/alcaraz-paul-h
 H2H vero 6-2, campione annotato 3-2, e i tre mancanti tutti vinti dallo stesso
 giocatore.
 
+Il modo più rapido è il comando già pronto, che stampa la tabella, i due H2H,
+l'elenco dei match mancanti e l'avviso quando sono tutti vinti dalla stessa
+persona:
+
+```bash
+python3 -m lib.catalog --player "Carlos Alcaraz" --vs "Tommy Paul"
+```
+
+Da codice, per proseguire con l'analisi:
+
 ```python
 from lib import loaders
-n = loaders.normalize_name
 
-tml = loaders.load_tml("atp")
-w, l = n(tml.winner_name), n(tml.loser_name)
-a, b = n("Carlos Alcaraz"), n("Tommy Paul")
-ufficiali = tml[((w == a) & (l == b)) | ((w == b) & (l == a))].sort_values("tourney_date")
-
-mcp = loaders.load_mcp_matches("m")
-annotati = mcp[mcp.apply(lambda r: {r.player_1, r.player_2} == {"Carlos Alcaraz", "Tommy Paul"}, axis=1)]
-
-link = loaders.link_mcp_to_tml(annotati, ufficiali)   # quali dei due elenchi combaciano
+d = loaders.h2h("Carlos Alcaraz", "Tommy Paul")   # match ufficiali
+d[d.charted]                                       # quelli annotati colpo per colpo
+d.attrs["annotati_senza_ufficiale"]                # esibizioni e Challenger fuori dal circuito
 ```
 
 Presenta il risultato come tabella con una colonna `annotato` sì/no, più le due

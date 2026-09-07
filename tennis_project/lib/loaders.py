@@ -517,3 +517,41 @@ def processed_info(name: str) -> dict:
         raise FileNotFoundError(f"{mf} non esiste.")
     import json
     return json.loads(mf.read_text())
+
+
+def h2h(player_a: str, player_b: str, gender: str = "m", tour: str = "atp") -> pd.DataFrame:
+    """Gli scontri diretti fra due giocatori, con la copertura dell'annotazione.
+
+    Ritorna i match **ufficiali** (TennisMyLife) con una colonna `charted` che
+    dice se il Match Charting Project li ha annotati colpo per colpo, e
+    `mcp_match_id` per raggiungere il dettaglio.
+
+    È il primo passo di qualunque analisi su un confronto: senza sapere quanti
+    match mancano all'annotazione, e chi li ha vinti, ogni media calcolata sul
+    sottoinsieme annotato può essere distorta senza che si veda.
+
+    I nomi passano da `normalize_name()`, quindi "Auger-Aliassime" e
+    "Auger Aliassime" trovano lo stesso giocatore.
+    """
+    tml = load_tml(tour)
+    a, b = normalize_name(player_a), normalize_name(player_b)
+    w, l = normalize_name(tml["winner_name"]), normalize_name(tml["loser_name"])
+    uff = tml[((w == a) & (l == b)) | ((w == b) & (l == a))].sort_values("tourney_date")
+
+    mcp = load_mcp_matches(gender)
+    coppia = {normalize_name(x) for x in (player_a, player_b)}
+    ann = mcp[mcp.apply(
+        lambda r: {normalize_name(r["player_1"]), normalize_name(r["player_2"])} == coppia,
+        axis=1)]
+
+    link = link_mcp_to_tml(ann, uff) if len(ann) and len(uff) else pd.DataFrame(
+        columns=["match_id", "tml_match_id"])
+    out = uff.merge(link[["tml_match_id", "match_id"]], on="tml_match_id",
+                    how="left", validate="one_to_one")
+    out = out.rename(columns={"match_id": "mcp_match_id"})
+    out["charted"] = out["mcp_match_id"].notna()
+
+    # Match annotati che non hanno un corrispettivo ufficiale: esibizioni,
+    # Challenger, qualificazioni. Vanno segnalati, non nascosti.
+    out.attrs["annotati_senza_ufficiale"] = int(len(ann) - out["charted"].sum())
+    return out.reset_index(drop=True)

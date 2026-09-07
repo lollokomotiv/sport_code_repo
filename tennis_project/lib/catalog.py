@@ -95,9 +95,47 @@ def search(player: str | None = None, tournament: str | None = None,
     return df
 
 
+def h2h(player_a: str, player_b: str, gender: str = "m") -> None:
+    """Copertura di un confronto diretto: quanti match, quanti annotati, chi ha vinto."""
+    from .loaders import h2h as _h2h
+
+    d = _h2h(player_a, player_b, gender)
+    if d.empty:
+        print(f"Nessun incontro ufficiale fra {player_a} e {player_b}.")
+        return
+
+    v = d[["tourney_date", "tourney_name", "surface", "round", "best_of",
+           "winner_name", "score"]].copy()
+    v["tourney_date"] = v["tourney_date"].dt.date
+    v["annotato"] = d["charted"].map({True: "si", False: "NO"})
+    print(f"{len(d)} incontri disputati, {int(d.charted.sum())} annotati colpo per colpo\n")
+    print(v.to_string(index=False))
+
+    vinte = d["winner_name"].value_counts()
+    print(f"\nH2H completo:  {' - '.join(f'{k} {n}' for k, n in vinte.items())}")
+    if d.charted.any():
+        va = d[d.charted]["winner_name"].value_counts()
+        print(f"H2H annotato:  {' - '.join(f'{k} {n}' for k, n in va.items())}")
+    mancanti = d[~d.charted]
+    if len(mancanti):
+        print(f"\nNon annotati ({len(mancanti)}), vinti da:")
+        for _, x in mancanti.iterrows():
+            print(f"  {x.tourney_date.date()}  {x.tourney_name} {x['round']:<5} "
+                  f"{x.surface:<6} {x.winner_name}")
+        squilibrio = mancanti["winner_name"].value_counts()
+        if len(squilibrio) == 1:
+            print(f"\nATTENZIONE: tutti i match mancanti sono stati vinti da "
+                  f"{squilibrio.index[0]}. Il campione annotato è distorto.")
+    extra = d.attrs.get("annotati_senza_ufficiale", 0)
+    if extra:
+        print(f"\nInoltre {extra} match annotati non hanno un corrispettivo ufficiale "
+              "(esibizioni, Challenger o qualificazioni).")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Inventario e ricerca nei dati tennis")
     p.add_argument("--player", help="filtra i match annotati per giocatore (sottostringa)")
+    p.add_argument("--vs", help="con --player: copertura del confronto diretto fra i due")
     p.add_argument("--tournament", help="filtra per torneo (sottostringa)")
     p.add_argument("--surface", help="Hard, Clay, Grass, Carpet")
     p.add_argument("--since", type=int, help="solo dall'anno indicato in poi")
@@ -105,7 +143,11 @@ def main() -> None:
     p.add_argument("--limit", type=int, default=15)
     args = p.parse_args()
 
-    if any([args.player, args.tournament, args.surface, args.since]):
+    if args.vs:
+        if not args.player:
+            raise SystemExit("--vs richiede anche --player")
+        h2h(args.player, args.vs, args.gender)
+    elif any([args.player, args.tournament, args.surface, args.since]):
         search(args.player, args.tournament, args.surface, args.since, args.gender, args.limit)
     else:
         inventory()
