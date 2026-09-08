@@ -11,7 +11,6 @@ da un comando lanciato a mano e poi perso.
     python3 analyses/alcaraz-paul-smorzate/run.py
 """
 
-import math
 import sys
 from pathlib import Path
 
@@ -19,8 +18,9 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from lib import loaders  # noqa: E402
+from lib import shots  # noqa: E402
 from lib.paths import RAW_DIR  # noqa: E402
+from lib.stats import wilson, z_two_proportions  # noqa: E402
 
 A, B = "Carlos Alcaraz", "Tommy Paul"
 FIGURES = Path(__file__).parent / "figures"
@@ -37,105 +37,11 @@ GRIGLIA, SUPERFICIE = "#e1e0d9", "#fcfcfb"
 
 # --------------------------------------------------------------------- utilità
 
-def wilson(k: float, n: float, z: float = 1.96) -> tuple[float, float]:
-    """Intervallo di confidenza al 95% per una proporzione (metodo di Wilson).
-
-    Serve perché qui le percentuali poggiano su 18-48 punti per avversario:
-    senza barre d'errore un grafico di tassi su campioni così piccoli suggerisce
-    differenze che i dati non sostengono.
-    """
-    if not n:
-        return float("nan"), float("nan")
-    p = k / n
-    d = 1 + z * z / n
-    centro = (p + z * z / (2 * n)) / d
-    semi = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
-    return 100 * (centro - semi), 100 * (centro + semi)
-
-
-def z_due_proporzioni(k1: float, n1: float, k2: float, n2: float) -> tuple[float, float]:
-    """Test z sulla differenza fra due proporzioni. Ritorna (z, p bilaterale)."""
-    p_comune = (k1 + k2) / (n1 + n2)
-    se = math.sqrt(p_comune * (1 - p_comune) * (1 / n1 + 1 / n2))
-    z = (k1 / n1 - k2 / n2) / se
-    return z, math.erfc(abs(z) / math.sqrt(2))
-
-
 def sezione(titolo: str) -> None:
     print(f"\n{'=' * 78}\n{titolo}\n{'=' * 78}")
 
 
-# ----------------------------------------------------------------- caricamento
-
-def carica() -> pd.DataFrame:
-    """Una riga per match e giocatore: smorzate, esiti, e punti del match.
-
-    I punti totali vengono dall'Overview (servizio + risposta) e servono da
-    riferimento: senza di loro la resa della smorzata non è interpretabile.
-    """
-    st = pd.read_csv(RAW_DIR / "mcp" / "charting-m-stats-ShotTypes.csv", low_memory=False)
-    # `Dr` = smorzate, `Total` = tutti i colpi. Sono livelli diversi della colonna
-    # `row`, che in questo file è gerarchica: non vanno mai sommati fra loro.
-    dr = st[st.row == "Dr"].set_index(["match_id", "player"])[
-        ["shots", "winners", "induced_forced", "unforced",
-         "shots_in_pts_won", "shots_in_pts_lost"]]
-    tot = st[st.row == "Total"].set_index(["match_id", "player"])[["shots"]].rename(
-        columns={"shots": "colpi"})
-
-    ov = loaders.load_mcp_stats("Overview", "m").set_index(["match_id", "player"])
-    ov["punti_match"] = ov.serve_pts + ov.return_pts
-    ov["punti_vinti"] = ov.first_won + ov.second_won + ov.return_pts_won
-
-    m = loaders.load_mcp_matches("m")
-    d = (dr.join(tot, how="inner")
-           .join(ov[["punti_match", "punti_vinti"]], how="inner")
-           .reset_index()
-           .merge(m[["match_id", "date", "surface", "player_1", "player_2", "tournament"]],
-                  # due righe per match (una per giocatore) contro una riga nell'indice
-                  on="match_id", how="left", validate="many_to_one"))
-    d["avversario"] = d.player_1.where(d.player != d.player_1, d.player_2)
-    return d.dropna(subset=["surface"])
-
-
 # -------------------------------------------------------------------- analisi
-
-def confronto(d: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    """Volume e resa delle smorzate di Alcaraz, avversario per avversario.
-
-    **Volume** — le smorzate attese si calcolano applicando ai colpi giocati su
-    ciascuna superficie il tasso di Alcaraz su quella superficie. Il tasso di
-    riferimento **esclude i match con Paul**: includerli renderebbe il confronto
-    circolare.
-
-    **Resa** — la percentuale di punti vinti quando gioca una smorzata, meno la
-    percentuale di punti che vince complessivamente in quel confronto. La
-    sottrazione è essenziale: senza, si misurerebbe quanto Alcaraz è più forte
-    di quell'avversario, non quanto gli rende la smorzata.
-    """
-    a = d[d.player == A]
-    base = (a[a.avversario != B].groupby("surface")
-              .apply(lambda g: g.shots.sum() / g.colpi.sum(), include_groups=False))
-
-    def attese(sub: pd.DataFrame) -> float:
-        return float(sum(base[s] * g.colpi.sum() for s, g in sub.groupby("surface")))
-
-    righe = []
-    for opp, sub in a.groupby("avversario"):
-        if len(sub) < MIN_MATCH or sub.colpi.sum() <= MIN_COLPI:
-            continue
-        pv, pp = sub.shots_in_pts_won.sum(), sub.shots_in_pts_lost.sum()
-        con_smorzata = 100 * pv / (pv + pp)
-        in_generale = 100 * sub.punti_vinti.sum() / sub.punti_match.sum()
-        righe.append({
-            "avversario": opp, "match": len(sub), "colpi": int(sub.colpi.sum()),
-            "osservate": int(sub.shots.sum()), "attese": round(attese(sub), 1),
-            "rapporto": sub.shots.sum() / attese(sub),
-            "punti_smorzata": int(pv + pp), "punti_vinti_smorzata": int(pv),
-            "con_smorzata": con_smorzata, "in_generale": in_generale,
-            "differenziale": con_smorzata - in_generale,
-        })
-    return pd.DataFrame(righe).sort_values("rapporto").reset_index(drop=True), base
-
 
 def esiti_smorzate(a: pd.DataFrame) -> pd.DataFrame:
     """Come finiscono le smorzate, contro Paul e contro tutti gli altri.
@@ -171,16 +77,8 @@ def composizione_colpi(ids_paul: set[str]) -> pd.DataFrame:
     I codici di `ShotTypes` sono gerarchici: `Base` e `Net` dividono il totale,
     `Vo` e `Sl` sono sottoinsiemi. Si confrontano quote sul totale, mai somme.
     """
-    st = pd.read_csv(RAW_DIR / "mcp" / "charting-m-stats-ShotTypes.csv", low_memory=False)
-    st = st[st.player == A]
-    piv = st.pivot_table(index="match_id", columns="row", values="shots", aggfunc="sum")
-
-    righe = {}
-    for lab, sub in [("vs Paul", piv[piv.index.isin(ids_paul)]),
-                     ("vs altri", piv[~piv.index.isin(ids_paul)])]:
-        righe[lab] = {c: round(100 * sub[c].sum() / sub["Total"].sum(), 2)
-                      for c in ["Base", "Net", "Vo", "Sl", "Dr", "Lo"]}
-    out = pd.DataFrame(righe).T
+    out = shots.shot_mix(None, A, ids_paul).round(2)
+    out.index = ["vs Paul", "vs altri"]
     return out.rename(columns={"Base": "fondo_campo", "Net": "a_rete", "Vo": "volee",
                                "Sl": "slice", "Dr": "smorzate", "Lo": "pallonetti"})
 
@@ -211,7 +109,7 @@ def test(a: pd.DataFrame, ids_paul: set[str]) -> None:
     print(f"{'confronto':34}{'vs Paul':>12}{'vs altri':>12}{'z':>8}{'p':>9}")
     print("-" * 78)
     for lab, k1, n1, k2, n2 in prove:
-        z, p = z_due_proporzioni(k1, n1, k2, n2)
+        z, p = z_two_proportions(k1, n1, k2, n2)
         print(f"{lab:34}{100*k1/n1:>11.1f}%{100*k2/n2:>11.1f}%{z:>8.2f}{p:>9.4f}")
     print("\nIC 95% sui punti vinti con la smorzata:")
     for lab, sub in [("vs Paul", vs), ("vs altri", altri)]:
@@ -377,7 +275,7 @@ def grafico_doppio(r: pd.DataFrame, diff_altri: float, dest: Path) -> None:
 # ------------------------------------------------------------------------ main
 
 def main() -> None:
-    d = carica()
+    d = shots.load_shot_type("Dr", "m")
     a = d[d.player == A]
     vs = a[a.avversario == B]
     ids_paul = set(vs.match_id)
@@ -385,7 +283,7 @@ def main() -> None:
     sezione(f"ALCARAZ: {len(a)} MATCH ANNOTATI, {len(vs)} CONTRO {B.upper()}")
     print(f"tasso complessivo: {100 * a.shots.sum() / a.colpi.sum():.2f} smorzate ogni 100 colpi")
 
-    r, base = confronto(d)
+    r, base = shots.observed_vs_expected(d, A, exclude_opponent=B)
     print("\ntasso di riferimento per superficie (esclusi i match con Paul):")
     print((100 * base).round(2).to_string())
 

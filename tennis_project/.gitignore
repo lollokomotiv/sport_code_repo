@@ -29,3 +29,10 @@ venv/
 # Ambiente / OS
 .env
 .DS_Store
+
+# Analisi contestuali, non materiale di portfolio: nate da una conversazione
+# su partite specifiche, non da un progetto di data science che regga da solo.
+# Elencate una per una di proposito — una regola generica su analyses/
+# ingoierebbe in silenzio anche le analisi che vanno pubblicate.
+analyses/alcaraz-zverev-smorzate/
+analyses/zverev-alcaraz-vinte-perse/
