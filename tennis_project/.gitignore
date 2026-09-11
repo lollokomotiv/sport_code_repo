@@ -36,3 +36,11 @@ venv/
 # ingoierebbe in silenzio anche le analisi che vanno pubblicate.
 analyses/alcaraz-zverev-smorzate/
 analyses/zverev-alcaraz-vinte-perse/
+# Contiene il ritratto di Zverev (docs/zverev_head_2026.png), licenza da verificare.
+analyses/zverev-doppi-falli/
+
+# Analisi tenute solo in locale, non pubblicate su GitHub.
+# L'esclusione della cartella vince sulla regola !analyses/**/figures/ qui sopra:
+# git non può ri-includere un file se una cartella che lo contiene è esclusa.
+analyses/alcaraz-paul-h2h/
+analyses/alcaraz-paul-smorzate/

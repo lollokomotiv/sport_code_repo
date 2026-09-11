@@ -66,3 +66,67 @@ def z_observed_vs_expected(observed: float, expected: float, trials: float) -> t
     se = math.sqrt(trials * p0 * (1 - p0))
     z = (observed - expected) / se
     return z, math.erfc(abs(z) / math.sqrt(2))
+
+
+# ------------------------------------------------------------------ conteggi
+
+def _poisson_cdf(k: int, lam: float) -> float:
+    """P(X <= k) per X ~ Poisson(lam), sommando i termini in scala logaritmica."""
+    if k < 0:
+        return 0.0
+    if lam <= 0:
+        return 1.0
+    return min(1.0, sum(math.exp(i * math.log(lam) - lam - math.lgamma(i + 1))
+                        for i in range(int(k) + 1)))
+
+
+def poisson_interval(k: int, conf: float = 0.95) -> tuple[float, float]:
+    """Intervallo esatto (Garwood) per la media di un conteggio di Poisson.
+
+    Serve per eventi rari contati su pochi match — i doppi falli contro un
+    avversario affrontato 4 volte sono una ventina — dove l'approssimazione
+    normale produce intervalli simmetrici e sbagliati. Si trova per bisezione,
+    senza dipendere da scipy.
+    """
+    alfa = (1 - conf) / 2
+
+    def bisezione(f, lo, hi):
+        for _ in range(200):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if f(mid) else (lo, mid)
+        return (lo + hi) / 2
+
+    alto = max(10.0, 5 * (k + 1))
+    # limite inferiore: il lambda per cui P(X >= k) = alfa
+    basso = 0.0 if k == 0 else bisezione(lambda l: 1 - _poisson_cdf(k - 1, l) < alfa, 0.0, alto)
+    # limite superiore: il lambda per cui P(X <= k) = alfa
+    sopra = bisezione(lambda l: _poisson_cdf(k, l) > alfa, 0.0, alto)
+    return basso, sopra
+
+
+def poisson_test(observed: int, expected: float) -> float:
+    """p bilaterale esatto: il conteggio osservato è compatibile con quello atteso?
+
+    Doppio della coda più piccola, limitato a 1. L'atteso è trattato come noto:
+    vale quando il riferimento poggia su molti più eventi del soggetto.
+    """
+    if expected <= 0:
+        return float("nan")
+    coda_bassa = _poisson_cdf(observed, expected)
+    coda_alta = 1 - _poisson_cdf(observed - 1, expected)
+    return min(1.0, 2 * min(coda_bassa, coda_alta))
+
+
+def holm(p_values: list[float]) -> list[float]:
+    """p corretti per confronti multipli (Holm-Bonferroni), nello stesso ordine.
+
+    Con 74 avversari, qualche p sotto 0,05 esce per puro caso: questa correzione
+    dice quali estremi restano tali dopo averne tenuto conto.
+    """
+    m = len(p_values)
+    ordine = sorted(range(m), key=lambda i: p_values[i])
+    corretti, massimo = [0.0] * m, 0.0
+    for rango, i in enumerate(ordine):
+        massimo = max(massimo, min(1.0, (m - rango) * p_values[i]))
+        corretti[i] = massimo
+    return corretti
