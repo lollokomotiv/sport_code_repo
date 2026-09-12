@@ -12,15 +12,15 @@ description: >-
 
 # Articolo social (stile X)
 
-Questa skill viene **dopo** `nuova-analisi`. Presuppone che esista già
-un'analisi conclusa sotto `analyses/<slug>/`, con il suo `run.py` e il suo
-README. Se non esiste, non è il momento di questa skill: si torna a
+Questa skill viene **dopo** `nuova-analisi`. Presuppone che esista già almeno
+un'analisi conclusa sotto `analyses/<matchup>/<analisi>/`, con il suo `run.py`
+e il suo README. Se non esiste, non è il momento di questa skill: si torna a
 `nuova-analisi` e si fa prima l'analisi.
 
 ## Regola che vale per tutti i passi: il post non produce numeri
 
-**Ogni cifra che compare nel post deve già stare nell'output di
-`analyses/<slug>/run.py`.** Il post è un atto di comunicazione, non di calcolo.
+**Ogni cifra che compare nel post deve già stare nell'output del `run.py` di
+una delle analisi scelte.** Il post è un atto di comunicazione, non di calcolo.
 
 Se il taglio richiede un numero che l'analisi non ha — "e contro i mancini?",
 "e negli ultimi due anni?" — la risposta non è calcolarlo nella shell. La
@@ -36,11 +36,21 @@ serve difenderlo.
 
 ## Il flusso, in ordine
 
-### 1. Rileggi l'analisi prima di parlarne
+### 1. Scegli con l'utente le analisi, poi rileggile
 
-Apri il README dell'analisi **e** l'output di `run.py`. Non scrivere dal
-ricordo della conversazione: il README contiene i limiti, e i limiti sono metà
-del lavoro.
+Le analisi sono raggruppate per matchup, e un post su un confronto può
+appoggiarsi a più d'una. Leggi il `README.md` del matchup
+(`analyses/<matchup>/README.md`): elenca le analisi fatte, ciascuna con il suo
+risultato in una riga. **Chiedi all'utente quali vuole usare per il post** —
+con `AskUserQuestion` e `multiSelect: true` se sono al massimo quattro,
+altrimenti elencandole nel testo. Non sceglierle al suo posto, anche quando la
+conversazione sembra puntare a una sola.
+
+Poi, per ognuna delle scelte, apri il README dell'analisi **e** l'output di
+`run.py`. Non scrivere dal ricordo della conversazione: il README contiene i
+limiti, e i limiti sono metà del lavoro. Se due analisi scelte usano campioni o
+riferimenti diversi (una tutti gli incontri da TennisMyLife, l'altra solo gli
+annotati), il post deve dire quale numero viene da quale campione.
 
 Estrai tre cose, in questa forma:
 
@@ -159,9 +169,11 @@ post viene visto piccolo, in movimento, spesso su telefono. Cambia:
 - **caratteri più grandi**, e il titolo che dice il risultato, non l'asse;
 - **la fonte resta nel grafico**, perché l'immagine viene ripubblicata da sola.
 
-Il codice del grafico del post **sta anch'esso in `analyses/<slug>/run.py`** (o
-in un `post_figure()` nella stessa cartella) e la figura va in
-`analyses/<slug>/figures/`, che è versionata. Vale la regola di
+Il codice del grafico del post **sta anch'esso nel `run.py` dell'analisi di cui
+mostra i numeri** (o in un `post_figure()` nella stessa cartella) e la figura va
+nella sua `figures/`, che è versionata. Un grafico che mette insieme i numeri di
+più analisi è il segnale che serve un'analisi nuova del matchup che li combini:
+si torna a `nuova-analisi`. Vale la regola di
 `nuova-analisi`: nessuna cifra scritta a mano nei testi del grafico, tutto da
 f-string.
 
@@ -185,8 +197,10 @@ caratteri di ogni parte, così:
 <testo>
 ```
 
-Poi salva il testo in `analyses/<slug>/posts/<AAAA-MM-GG>-<slug-breve>.md`, con
-in testa una riga che dice da quale analisi viene e a quale figura si appoggia.
+Poi salva il testo in `analyses/<matchup>/<analisi>/posts/<AAAA-MM-GG>-<slug-breve>.md`
+se viene da un'analisi sola, in `analyses/<matchup>/posts/` se ne usa più
+d'una. In testa, una riga che dice da quali analisi viene e a quale figura si
+appoggia.
 Serve a due cose: ritrovare cosa è stato pubblicato e con quali numeri, e
 accorgersi se un aggiornamento dei dati rende falso un post già uscito.
 
@@ -196,7 +210,7 @@ accorgersi se un aggiornamento dei dati rende falso un post già uscito.
 
 ## Esempio completo
 
-Dall'analisi `analyses/alcaraz-zverev-smorzate/`.
+Dall'analisi `analyses/alcaraz-zverev/smorzate/`.
 
 **Il taglio proposto dall'utente**: "Alcaraz massacra Zverev di smorzate perché
 Zverev sta troppo indietro, e gli rende tantissimo".
@@ -237,7 +251,8 @@ parte che lo rende non ovvio.
 
 ## Prima di consegnare un post
 
-- ogni numero del post sta nell'output di `run.py`?
+- ho chiesto all'utente quali analisi del matchup usare?
+- ogni numero del post sta nell'output del `run.py` di un'analisi scelta?
 - il post dice **quanti** match o punti, e che sono **annotati**?
 - c'è un "because" o un "so" che l'analisi non ha misurato?
 - una percentuale è confrontata con qualcosa, o è appesa al nulla?
@@ -247,5 +262,5 @@ parte che lo rende non ovvio.
 - il grafico è leggibile piccolo, e l'ho **guardato**?
 - c'è l'alt text?
 - il Match Charting Project è citato, senza handle inventati?
-- ho salvato il testo in `analyses/<slug>/posts/`?
+- ho salvato il testo in `posts/`, dell'analisi o del matchup?
 - quando ho dovuto tagliare, ho tagliato un numero e non un limite?

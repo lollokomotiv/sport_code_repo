@@ -1,13 +1,15 @@
 """<Titolo dell'analisi> — vedi README.md.
 
 Da lanciare dalla radice di tennis_project:
-    python3 analyses/<slug>/run.py
+    python3 analyses/<matchup>/<analisi>/run.py
 """
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+# parents[3] è la radice di tennis_project una volta copiato il template in
+# analyses/<matchup>/<analisi>/: qui, dentro _template/, non punta dove serve.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from lib import loaders  # noqa: E402
 

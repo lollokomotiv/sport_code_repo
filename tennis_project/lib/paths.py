@@ -17,9 +17,13 @@ ANALYSES_DIR = PROJECT_ROOT / "analyses"
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebooks"
 
 
-def analysis_dir(name: str) -> Path:
-    """Cartella di una singola analisi, es. analysis_dir("serve-dominance")."""
-    return ANALYSES_DIR / name
+def analysis_dir(matchup: str, name: str | None = None) -> Path:
+    """Cartella di un matchup o di una sua analisi.
+
+    analysis_dir("alcaraz-zverev") -> analyses/alcaraz-zverev/
+    analysis_dir("alcaraz-zverev", "smorzate") -> analyses/alcaraz-zverev/smorzate/
+    """
+    return ANALYSES_DIR / matchup if name is None else ANALYSES_DIR / matchup / name
 
 
 def processed_path(name: str) -> Path:

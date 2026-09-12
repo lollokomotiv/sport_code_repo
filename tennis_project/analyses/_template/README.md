@@ -1,7 +1,8 @@
 # <Titolo dell'analisi>
 
-> Template. Copia questa cartella, rinominala, sostituisci i segnaposto ed
-> elimina questa riga.
+> Template. Copia questa cartella in `analyses/<matchup>/<analisi>/`,
+> sostituisci i segnaposto ed elimina questa riga. I link relativi sotto
+> valgono dalla posizione copiata, non da `_template/`.
 
 ## Domanda
 
@@ -11,7 +12,7 @@ vantaggio del servizio su erba rispetto alla terra, a parità di giocatore?".
 ## Dati
 
 - **Fonte**: (Match Charting Project / tennis-data.co.uk / altro — vedi
-  [`../../docs/fonti-dati.md`](../../docs/fonti-dati.md))
+  [`../../../docs/fonti-dati.md`](../../../docs/fonti-dati.md))
 - **Comando di download**: `python3 -m lib.download ...`
 - **Filtri applicati**: periodo, superficie, livello di torneo, minimo di match
   per giocatore…
@@ -40,5 +41,5 @@ Cosa **non** dimostra questo risultato. Almeno:
 
 ```bash
 python3 -m lib.download <...>
-python3 analyses/<slug>/run.py
+python3 analyses/<matchup>/<analisi>/run.py
 ```

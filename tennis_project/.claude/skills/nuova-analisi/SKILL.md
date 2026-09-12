@@ -6,7 +6,8 @@ description: >-
   Sinner", "come se la giocano X e Y"), chiede di verificare una tesi sui dati,
   dice "nuova analisi", "analizziamo", "vediamo se", "mi interessa capire",
   oppure nomina due tennisti insieme. Copre il flusso completo — copertura del
-  campione, verifica della tesi, script, grafico, README dell'analisi.
+  campione, scelta delle analisi già fatte sul matchup da riusare, verifica
+  della tesi, script, grafico, README dell'analisi e del matchup.
 ---
 
 # Nuova analisi
@@ -14,8 +15,8 @@ description: >-
 ## Regola che vale per tutti i passi: ogni numero nasce da codice committato
 
 **Qualunque cifra o grafico mostrato all'utente deve venire da codice che sta in
-`analyses/<slug>/run.py`.** Mai da un comando lanciato al volo nella shell e poi
-perso.
+`analyses/<matchup>/<analisi>/run.py`.** Mai da un comando lanciato al volo
+nella shell e poi perso.
 
 Il motivo è pratico, non formale: un numero calcolato a mano non si può
 ricontrollare, non si aggiorna quando i dati cambiano, e nessuno sa più con
@@ -52,7 +53,7 @@ non un'analisi:
 - **chi ha vinto quelli mancanti**
 
 Se i match non annotati pendono da una parte, il campione dettagliato è
-distorto: dillo subito e quantificalo. Esempio reale da `analyses/alcaraz-paul-h2h/`:
+distorto: dillo subito e quantificalo. Esempio reale da `analyses/alcaraz-paul/h2h/`:
 H2H vero 6-2, campione annotato 3-2, e i tre mancanti tutti vinti dallo stesso
 giocatore.
 
@@ -77,7 +78,45 @@ d.attrs["annotati_senza_ufficiale"]                # esibizioni e Challenger fuo
 Presenta il risultato come tabella con una colonna `annotato` sì/no, più le due
 righe di riepilogo (H2H completo / H2H annotato).
 
-### 2. La tesi la scrive l'utente
+### 2. Il matchup ha già delle analisi? Chiedi quali usare
+
+Le analisi sono raggruppate per matchup: `analyses/<matchup>/<analisi>/`, con i
+cognomi in ordine alfabetico (`alcaraz-zverev`, mai `zverev-alcaraz`). Controlla
+se la cartella del matchup esiste già.
+
+**Se esiste**, leggi il suo `README.md`: ha la copertura dell'H2H e la tabella
+delle analisi già fatte, con la domanda e il risultato in una riga. Poi,
+insieme al quadro di copertura, **chiedi all'utente quali di queste analisi
+vuole usare** per il lavoro nuovo. Elencale tutte con la loro riga di
+risultato; se sono al massimo quattro usa `AskUserQuestion` con
+`multiSelect: true`, altrimenti elencale nel testo e chiedi. Nessuna analisi è
+sempre una risposta valida.
+
+Non decidere al posto dell'utente, né in un senso né nell'altro: caricare tutto
+riempie la conversazione di numeri che non c'entrano, ignorare tutto porta a
+rifare lavoro già validato o a contraddirlo senza accorgersene.
+
+Per ogni analisi scelta:
+
+- **rileggi README e output di `run.py`**, non il ricordo della conversazione
+  in cui è nata: i limiti sono lì;
+- **riusa le scelte già difese** — riferimento, filtri, trattamento dei
+  confondenti — invece di reinventarle: due analisi dello stesso matchup con
+  riferimenti diversi producono numeri che il lettore confronterà comunque;
+- **se la nuova domanda ha già risposta** in una di esse, dillo prima di
+  scrivere codice. Se la estende, decidi con l'utente se è una sezione in più di
+  quell'analisi o una sottocartella nuova: la regola resta una domanda per
+  cartella;
+- **confronta la copertura** del passo 1 con quella scritta nel README del
+  matchup. Se nel frattempo si è giocato un altro incontro, le analisi scelte
+  vanno rieseguite prima di citarne i numeri.
+
+**Se non esiste**, creala con un `README.md`: la copertura del passo 1 e una
+tabella vuota delle analisi (`Cartella | Domanda | Risultato in una riga |
+Fonte`). Le analisi su un giocatore solo, contro tutto il circuito, vanno in
+`analyses/<cognome>/`.
+
+### 3. La tesi la scrive l'utente
 
 Dopo il quadro di copertura, **fermati e aspetta**. L'utente formula una tesi:
 "secondo me Paul perde perché non regge gli scambi lunghi", "Sinner serve meglio
@@ -87,11 +126,14 @@ segnala quali tesi i dati disponibili *non* possono verificare.
 Se la tesi è ambigua, chiedi cosa la renderebbe vera o falsa **in termini di
 numeri** prima di scrivere codice.
 
-### 3. Lo script che la verifica
+### 4. Lo script che la verifica
 
 Piccolo e mirato: la tesi è una domanda sola, lo script risponde a quella.
 
-- vive in `analyses/<slug>/run.py`, creato da `analyses/_template/`
+- vive in `analyses/<matchup>/<analisi>/run.py`, copiato da `analyses/_template/`
+  (`cp -r analyses/_template analyses/<matchup>/<analisi>`); il nome
+  dell'analisi è il tema, senza ripetere i giocatori (`smorzate`, non
+  `alcaraz-zverev-smorzate`)
 - carica **solo** da `lib/`, mai download propri, mai percorsi relativi
 - stampa il quadro di copertura del passo 1 **prima** dei numeri della tesi
 - chiude dichiarando la dimensione del campione
@@ -111,7 +153,7 @@ Il rimedio standard è confrontare **osservato contro atteso**: si calcola il
 tasso del soggetto su ciascun livello del confondente, lo si applica ai volumi
 effettivi, e si guarda il rapporto. Poi si legge quel rapporto **in
 distribuzione**, non da solo: il numero dice qualcosa solo rispetto agli altri
-casi confrontabili. Vedi `analyses/alcaraz-paul-smorzate/run.py`, dove il
+casi confrontabili. Vedi `analyses/alcaraz-paul/smorzate/run.py`, dove il
 confronto grezzo dava ragione alla tesi e quello controllato la smentiva.
 
 **Escludi il soggetto dal riferimento**: se il tasso atteso è calcolato
@@ -130,7 +172,7 @@ risultato.
 La tesi può risultare **falsa**: è un risultato, si scrive nel README e non si
 cerca un taglio dei dati che la salvi.
 
-### 4. Chiedi se serve un grafico
+### 5. Chiedi se serve un grafico
 
 Quando i numeri sono pronti, **chiedi sempre**:
 
@@ -148,7 +190,7 @@ forma adatta al tipo di affermazione:
 | due dimensioni insieme (volume vs efficacia) | scatter, o due dot plot affiancati con le stesse righe |
 | un tasso che ha senso solo rispetto a un riferimento | **differenziale**: sottrai la linea di base e centra l'asse sullo zero |
 
-I grafici vanno in `analyses/<slug>/figures/`, e **sono versionati**: il
+I grafici vanno in `analyses/<matchup>/<analisi>/figures/`, e **sono versionati**: il
 `.gitignore` ignora le immagini ovunque tranne lì, perché sono il risultato
 visibile del lavoro e senza di loro i README mostrano link rotti su GitHub.
 
@@ -156,11 +198,15 @@ visibile del lavoro e senza di loro i README mostrano link rotti su GitHub.
 colori, non la disposizione: le collisioni fra etichette, il testo che esce dal
 bordo e i titoli disallineati si vedono solo aprendo il file.
 
-### 5. README dell'analisi
+### 6. README dell'analisi e del matchup
 
 Dal template: **domanda → dati e filtri → metodo → risultato → limiti → come si
-riproduce**. Nei limiti va sempre la distorsione misurata al passo 1. Aggiorna
-l'indice in `analyses/README.md`.
+riproduce**. Nei limiti va sempre la distorsione misurata al passo 1.
+
+Poi aggiungi l'analisi alla tabella del `README.md` del matchup, con il
+risultato **in una riga**: è quella riga che la prossima volta, al passo 2,
+servirà all'utente per scegliere se riusarla. Aggiorna anche l'indice in
+`analyses/README.md`.
 
 ---
 
@@ -313,3 +359,8 @@ volte con spazi finali. `1/quota` non è una probabilità: usa
 - i merge hanno `validate=` e il numero di righe è quello atteso?
 - la distorsione del campione è dichiarata **prima** delle medie?
 - se la tesi è risultata falsa, l'ho scritto invece di cercare un taglio che la salvi?
+- se il matchup aveva già delle analisi, ho chiesto all'utente quali usare, e i
+  numeri nuovi sono coerenti con quelli delle analisi scelte (o la differenza è
+  spiegata)?
+- l'analisi è nella tabella del `README.md` del matchup, con il risultato in
+  una riga?

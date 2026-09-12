@@ -182,14 +182,20 @@ che avvisa se una fonte è cambiata dopo la costruzione.
 
 ### 7. Struttura di un'analisi
 
-Una cartella per analisi sotto `analyses/`, da `analyses/_template/`, con un
-README che dichiara nell'ordine: **domanda → dati e filtri → metodo → risultato
-→ limiti → come si riproduce**. Le prime due si compilano *prima* di scrivere
-codice.
+Una cartella **per matchup** sotto `analyses/` (cognomi in ordine alfabetico:
+`alcaraz-zverev/`), e dentro una sottocartella per analisi, da
+`analyses/_template/`: `analyses/alcaraz-zverev/smorzate/`. Le analisi su un
+giocatore solo vanno in `analyses/<cognome>/`. Ogni matchup ha un `README.md`
+con la copertura dell'H2H e l'indice delle sue analisi.
+
+Il README di ogni analisi dichiara nell'ordine: **domanda → dati e filtri →
+metodo → risultato → limiti → come si riproduce**. Le prime due si compilano
+*prima* di scrivere codice.
 
 Il download sta in `lib/download.py`, mai nell'analisi. Quando un pezzo di
 codice serve a due analisi, sale in `lib/` — alla seconda copia incolla, non
-alla terza. L'indice in `analyses/README.md` va aggiornato.
+alla terza. Vanno aggiornati il README del matchup e l'indice in
+`analyses/README.md`.
 
 ### 8. Convenzioni
 

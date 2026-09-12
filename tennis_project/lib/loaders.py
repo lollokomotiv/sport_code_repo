@@ -555,3 +555,28 @@ def h2h(player_a: str, player_b: str, gender: str = "m", tour: str = "atp") -> p
     # Challenger, qualificazioni. Vanno segnalati, non nascosti.
     out.attrs["annotati_senza_ufficiale"] = int(len(ann) - out["charted"].sum())
     return out.reset_index(drop=True)
+
+
+def player_coverage(player: str, gender: str = "m", tour: str = "atp") -> pd.DataFrame:
+    """Tutti i match ufficiali di un giocatore, con la colonna `charted`.
+
+    È l'equivalente di `h2h()` per un'analisi su un giocatore solo: senza un
+    avversario il campione annotato non pende verso un vincitore, ma pende per
+    superficie, periodo e importanza del match, e questa tabella serve a dirlo
+    prima delle medie.
+    """
+    tml = load_tml(tour)
+    p = normalize_name(player)
+    uff = tml[(normalize_name(tml["winner_name"]) == p)
+              | (normalize_name(tml["loser_name"]) == p)].sort_values("tourney_date")
+
+    mcp = load_mcp_matches(gender)
+    ann = mcp[(normalize_name(mcp["player_1"]) == p) | (normalize_name(mcp["player_2"]) == p)]
+    link = link_mcp_to_tml(ann, uff)
+    out = uff.merge(link[["tml_match_id", "match_id"]], on="tml_match_id",
+                    how="left", validate="one_to_one")
+    out = out.rename(columns={"match_id": "mcp_match_id"})
+    out["charted"] = out["mcp_match_id"].notna()
+    out["won"] = normalize_name(out["winner_name"]) == p
+    out.attrs["annotati_senza_ufficiale"] = int(len(ann) - out["charted"].sum())
+    return out.reset_index(drop=True)

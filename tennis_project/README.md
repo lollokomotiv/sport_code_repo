@@ -111,8 +111,8 @@ tennis_project/
 ├── data/
 │   ├── raw/             # as downloaded (not versioned)
 │   └── processed/       # reusable derived datasets (not versioned)
-├── analyses/            # one folder per analysis — see analyses/README.md
-│   └── _template/       # copy this to start one
+├── analyses/            # one folder per matchup, one subfolder per analysis — see analyses/README.md
+│   └── _template/       # copy this into analyses/<matchup>/ to start one
 ├── notebooks/           # scratch exploration — start here to look at the data
 │   ├── 01-esplorare-i-file.ipynb
 │   └── 02-query-di-esempio.ipynb
