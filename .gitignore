@@ -20,3 +20,8 @@ venv/
 
 # Dataset generati (rigenerabili con psxg/build_dataset.py)
 xgoals_project/datasets/
+
+# Analytics Cup: la submission è un fork separato di PySport/analytics_cup_*,
+# con la sua history e il suo remote. Sta dentro il workbench solo per comodità
+# sul disco — non va versionata qui.
+analytics_cup_project/submission/

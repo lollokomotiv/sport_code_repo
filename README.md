@@ -8,6 +8,25 @@ A collection of personal projects applying **Data Science, Data Engineering, and
 
 ## Projects
 
+### [Analytics Cup](./analytics_cup_project/)
+
+**Domain:** Football | **Tech:** Python, kloppy, floodlight, SkillCorner broadcast tracking data
+
+Workbench for the **SkillCorner X PySport Analytics Cup**, on open broadcast tracking
+data: 20 A-League 2024/25 matches at 10 fps, plus derived events, phases of play and
+season aggregates.
+
+The submission itself is a separate fork of the PySport template. This folder holds
+the exploration behind it.
+
+- Only 59% of tracked positions are actually observed; the rest are extrapolated when
+  players leave the broadcast frame (87% near the ball, 18% beyond 40 m, 15% for
+  goalkeepers)
+- `is_detected` is not exposed by kloppy, so measuring that limit means reading the raw
+  JSONL
+
+---
+
 ### [xGoals Project](./xgoals_project/)
 
 **Domain:** Football | **Tech:** Python, scikit-learn, LightGBM, StatsBomb Open Data, Jupyter

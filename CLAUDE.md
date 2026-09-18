@@ -6,6 +6,7 @@ Portfolio di progetti di analytics sportivo. Ogni progetto è indipendente: dati
 
 | Cartella | Dominio | Stato |
 |---|---|---|
+| [analytics_cup_project/](analytics_cup_project/) | Calcio — tracking SkillCorner, preparazione alla PySport Analytics Cup | Attivo |
 | [xgoals_project/](xgoals_project/) | Calcio — modelli xG/xA su StatsBomb open data | Attivo |
 | [totosport_project/](totosport_project/) | Web app di pronostici calcistici per un gruppo privato | Attivo |
 | [tennis_project/](tennis_project/) | Tennis — spazio di lavoro multi-analisi (TennisMyLife, Match Charting Project, quote) | Attivo |
@@ -14,7 +15,7 @@ Portfolio di progetti di analytics sportivo. Ogni progetto è indipendente: dati
 
 ## Regola principale
 
-**Prima di lavorare su un progetto, leggi il suo `CLAUDE.md`** (dove esiste: `xgoals_project/`, `totosport_project/`, `tennis_project/`).
+**Prima di lavorare su un progetto, leggi il suo `CLAUDE.md`** (dove esiste: `analytics_cup_project/`, `xgoals_project/`, `totosport_project/`, `tennis_project/`).
 
 I `CLAUDE.md` delle sottocartelle non vengono caricati all'avvio di una sessione aperta in root: vanno letti esplicitamente. Contengono le linee guida che contano — convenzioni di validazione, vincoli sui dati, stile del codice — e le regole di un progetto **non** valgono per gli altri.
 

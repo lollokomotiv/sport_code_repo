@@ -1,0 +1,56 @@
+# Analytics Cup — workbench.
+# Python 3.12. Venv: ~/Documents/Projects/sport_venvs/analytics_cup_project
+#
+# NOTA: questo è il requirements del WORKBENCH, volutamente largo.
+# Il requirements.txt della submission va tenuto MINIMO: solo ciò che
+# submission.ipynb importa davvero, perché deve girare su un ambiente pulito.
+
+# --- Base ---
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+jupyterlab>=4.0
+pyarrow>=14.0          # kloppy .to_df() e formati columnar
+polars>=1.0            # i tutorial ufficiali SkillCorner usano polars
+
+# --- Lettura e standardizzazione dei dati ---
+# kloppy: di PySport, co-organizzatore della gara. Deserializer SkillCorner
+# nativo + load_open_data() che scarica da GitHub. È lo standard di fatto qui.
+kloppy>=3.19
+
+# floodlight: toolkit di analisi multi-sport, modello dati proprio
+# (XY, Pitch, Events). Utile per metriche spaziali già implementate.
+floodlight>=1.2
+
+# databallpy: sincronizzazione tracking <-> eventi e feature di match.
+# Il suo punto di forza è proprio la sincronizzazione, che con dati
+# broadcast è tutt'altro che banale.
+databallpy>=0.8
+
+# --- Visualizzazione ---
+# mplsoccer: campi e chart per matplotlib. Già usato in xgoals_project.
+mplsoccer>=1.8
+
+# skillcornerviz: libreria di viz di SkillCorner, pensata sui loro aggregati
+# (radar, swarm plot, confronti). Parla nativamente il formato dei dati.
+skillcornerviz>=1.2
+
+# --- Modelli e metodi ---
+# unravelsports: graph neural network su dati di tracking. Richiede Python>=3.11.
+# Pesante (tensorflow/spektral): installalo solo se vai in quella direzione.
+# unravelsports>=1.2
+
+# socceraction: SPADL, VAEP, xT — dal gruppo ML-KULeuven.
+#
+# INCOMPATIBILE con floodlight in questo venv:
+#   floodlight 1.2.0  -> lxml>=5.3.0,<6.0.0
+#   socceraction 1.5.3 -> lxml>=4.9.3,<5.0.0
+#
+# Escluso perché è il meno essenziale dei due qui: nasce su dati EVENTO, non
+# tracking, e serve come riferimento concettuale per le superfici di valore
+# (xT), non come pipeline da eseguire. Se dovesse servire davvero, installalo
+# in un venv separato invece di declassare floodlight.
+# socceraction>=1.5
+
+# --- Utility ---
+tqdm>=4.66
