@@ -161,8 +161,11 @@ ha bisogno di sei pannelli per essere capito non è presentabile qui.
 plans/          filoni di lavoro numerati per priorità, con README.md come indice
 explorations/   notebook esplorativi, numerati, una domanda ciascuno
 lib/            codice condiviso fra le esplorazioni (accesso ai dati)
-notes/          risorse e letteratura
+notes/          risorse e link
 notes/dati/     com'è fatto il dataset, un documento per tipo di file
+notes/letteratura/   una scheda per paper, con verdetto di fattibilità
+docs/           i paper originali e le Research Directions (non versionati)
+figures/        output visivi delle esplorazioni
 submission/     il fork (gitignored)
 ```
 

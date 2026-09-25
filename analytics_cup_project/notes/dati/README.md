@@ -51,9 +51,9 @@ match.json ──player_id──> tracking.jsonl <──frame── dynamic_even
 | `data/aggregates/aus1league_physicalaggregates_20242025.csv` | metriche fisiche per giocatore-stagione (406 righe × 65 col.), solo prestazioni sopra i 60 minuti |
 | `data/aggregates/aus1league_obraggregates_20242025.csv` | off-ball runs aggregate |
 | `data/aggregates/aus1league_passingaggregates_20242025.csv` | passaggi aggregati |
-| `data/bodypose/` | 3D body pose, 29 giunti — **solo 2 partite** |
+| `data/bodypose/` | 3D body pose, 29 giunti, 25 fps — **solo 2 partite** → [bodypose.md](bodypose.md) |
 
-*Non ancora documentati.*
+Gli aggregati stagionali e `matches.json` **non sono ancora documentati**.
 
 ## Le tre cose da sapere prima di usare qualsiasi cosa
 

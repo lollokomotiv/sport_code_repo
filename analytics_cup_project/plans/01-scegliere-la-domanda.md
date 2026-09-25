@@ -51,5 +51,87 @@ Da non rifare, e da usare come calibrazione del livello atteso:
 
 ## Piste da valutare
 
-Da riempire dopo il 00. Per ognuna: quale dato serve, quale limite la minaccia,
-che figura produce.
+Per ognuna: quale dato serve, quale limite la minaccia, che figura produce.
+
+### A — Robustezza di `τ_opp` all'estrapolazione
+
+**Da:** [`notes/letteratura/pressione-tempo-arrivo.md`](../notes/letteratura/pressione-tempo-arrivo.md)
+
+Narizuka et al. misurano la pressione sul portatore come tempo minimo di arrivo
+dell'avversario più vicino, su 306 partite di tracking pulito a 25 fps da
+telecamere fisse. Non si chiedono cosa succeda alla misura quando le posizioni
+sono ricostruite — che è la condizione di chiunque usi dati broadcast.
+
+*La domanda:* quanto è robusto `τ_opp` all'estrapolazione?
+
+- quante volte l'avversario **più vicino** al portatore è estrapolato invece che
+  osservato (il tasso medio non basta: conta proprio quel giocatore lì)
+- di quanto si sposta `τ_opp` ricalcolandolo sulle sole posizioni osservate
+- se le relazioni del paper (pressione → avanzamento, pressione → perdita di
+  palla) sopravvivono restringendosi ai possessi interamente osservati
+- se l'errore è casuale o **sistematico**: l'estrapolazione sottostima o
+  sovrastima la pressione?
+
+| | |
+|---|---|
+| **Dato che serve** | tracking + `player_possession`, `is_detected`, velocità derivate |
+| **Cosa la minaccia** | velocità a 10 fps invece di 25: stime rumorose, e il rumore entra nel modello del moto |
+| **Perché regge** | dipende dai giocatori *vicini* alla palla, dove siamo all'87% osservato |
+| **Figura** | una: `τ_opp` osservato contro `τ_opp` estrapolato, o lo scostamento in distribuzione |
+| **Validazione gratis** | confronto con `time_to_impact` di SkillCorner |
+
+Corrisponde alla direzione 5 («Qualità dei dati broadcast») delle Research
+Directions, ma con un oggetto preciso invece che generico: non "le metriche
+difensive" in astratto, ma **una misura pubblicata, interpretabile e già
+validata altrove**, usata come banco di prova.
+
+È anche l'unica pista che trasforma il limite principale dei nostri dati da
+problema in oggetto di studio. Le altre lo subiscono.
+
+
+### B — «Esce o tiene?»: la scelta del difensore
+
+**Da:** [`notes/letteratura/`](../notes/letteratura/README.md) e
+[`explorations/02-body-pose.ipynb`](../explorations/02-body-pose.ipynb)
+
+Quasi tutta la letteratura difensiva misura lo **stato** (pressione, spazio,
+forma) o l'**esito** (valore concesso). La scelta è toccata solo dal ghosting —
+Groom et al. sui corner, Yurko et al. nel football americano — che però chiede
+*"quanto è diverso da un difensore medio?"*, non *"ha scelto bene fra le opzioni
+che aveva?"*.
+
+*La domanda:* quando un difensore esce sul portatore e quando tiene la
+posizione, e la scelta era quella giusta? Si confronta l'esito atteso delle due
+alternative, cioè il framing di VAEP applicato alla difesa.
+
+**Due livelli, con campioni diversi.** È la parte che rende la pista praticabile:
+
+| | Livello 1 — la scelta | Livello 2 — l'intenzione |
+|---|---|---|
+| Dati | `on_ball_engagement` + tracking + esito | + body pose (orientamento del busto) |
+| Campione | **17.445 eventi su 20 partite** | **1.961 eventi su 2 partite** |
+| Cosa regge | modello statistico, con split per partita | dimostrazione di metodo |
+
+Il primo livello sta in piedi da solo: se il pose si rivelasse inutilizzabile,
+non trascina giù il resto.
+
+| | |
+|---|---|
+| **Dato che serve** | `on_ball_engagement` (sottotipo, `frame_start`/`frame_end`), tracking, `end_type` del possesso |
+| **Cosa la minaccia** | definire l'alternativa controfattuale "tiene la posizione" senza un modello di ghosting |
+| **Perché regge** | gli ingaggi sono ravvicinati per definizione, quindi cadono dove tracking (87%) e pose (77%) funzionano meglio |
+| **Figura** | una: esito atteso uscita vs mantenimento, o la mappa delle scelte |
+
+**Il body pose è un'assenza verificata nella letteratura**, non solo poco usato:
+su 281 pagine e 13 paper, "body pose" compare zero volte e "body orientation"
+due, **entrambe come cosa che gli autori dichiarano di non aver usato** —
+Bischofberger nei lavori futuri, Narizuka nei limiti. E SkillCorner spedisce già
+un esempio di orientamento delle spalle in `src/features/pose_orientation.py`.
+
+### A o B?
+
+Non sono alternative pulite. La robustezza all'estrapolazione (pista A) potrebbe
+essere **la validazione** della pista B invece di un lavoro separato: se il
+modello della scelta poggia su posizioni ricostruite, va detto quanto.
+
+Da decidere prima di scrivere codice.

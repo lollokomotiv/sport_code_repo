@@ -25,3 +25,8 @@ xgoals_project/datasets/
 # con la sua history e il suo remote. Sta dentro il workbench solo per comodità
 # sul disco — non va versionata qui.
 analytics_cup_project/submission/
+
+# Analytics Cup: i paper della letteratura. Sono ~24 MB di PDF, quasi tutti
+# sotto copyright dell'editore. Quello che vale sta nelle schede in
+# analytics_cup_project/notes/letteratura/, che sono versionate.
+analytics_cup_project/docs/

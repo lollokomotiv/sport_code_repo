@@ -126,7 +126,8 @@ def load_match_meta(match_id: int | str) -> dict:
 
 
 def load_dynamic_events(match_id: int | str) -> pd.DataFrame:
-    return pd.read_csv(match_dir(match_id) / f"{match_id}_dynamic_events.csv")
+    return pd.read_csv(match_dir(match_id) / f"{match_id}_dynamic_events.csv",
+                       low_memory=False)
 
 
 def load_phases_of_play(match_id: int | str) -> pd.DataFrame:
