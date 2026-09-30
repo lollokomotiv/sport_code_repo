@@ -36,6 +36,18 @@ successivo possibile e aspetta conferma prima di procedere. In caso di ambiguit�
 fai una domanda mirata invece di svolgere una mole di lavoro su un'assunzione non
 verificata.
 
+**Eccezione: i compiti con un criterio di uscita deterministico** — test che
+passano, file prodotti, conteggi verificabili — si possono affidare a un `/goal`
+invece che a passi singoli. Tre condizioni:
+
+- **test e parametri si fissano prima**, con l'utente, e il loop non li modifica.
+  Se un test sembra sbagliato ci si ferma e se ne discute, non lo si corregge;
+- **il criterio riguarda il processo, non il risultato**: "la correlazione è
+  calcolata e riportata", mai "la correlazione supera 0,7". Una soglia sul
+  risultato insegna al loop a raggiungerla;
+- **alla fine si torna ai turni**: il loop riporta i numeri, non li interpreta.
+  L'interpretazione si fa insieme.
+
 ### L'obiettivo primario è capire il dataset
 
 La priorità non è arrivare in fretta a un output finale, ma che l'utente
@@ -161,6 +173,9 @@ ha bisogno di sei pannelli per essere capito non è presentabile qui.
 plans/          filoni di lavoro numerati per priorità, con README.md come indice
 explorations/   notebook esplorativi, numerati, una domanda ciascuno
 lib/            codice condiviso fra le esplorazioni (accesso ai dati)
+tests/          test scritti prima del codice: criteri di stop dei /goal
+scripts/        calcoli su tutte le partite, eseguibili da riga di comando
+reports/        output dei calcoli, in markdown, da leggere insieme
 notes/          risorse e link
 notes/dati/     com'è fatto il dataset, un documento per tipo di file
 notes/letteratura/   una scheda per paper, con verdetto di fattibilità
@@ -169,7 +184,7 @@ figures/        output visivi delle esplorazioni
 submission/     il fork (gitignored)
 ```
 
-Venv: `~/Documents/Projects/sport_venvs/analytics_cup_project`.
+Venv: `.venv/` in questa cartella (Python 3.12.8, da `requirements.txt`, in `.gitignore`).
 
 Come in `xgoals_project/`: quando emerge un problema che non si chiude subito,
 **va annotato nel piano pertinente** invece di restare in una conversazione.

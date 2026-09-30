@@ -117,6 +117,18 @@ almeno riportarne la quota, è il minimo.**
 Nota: la colonna è valorizzata solo per `passing_option` e `player_possession`; per
 gli altri due tipi è `NaN`, il che non significa "non estrapolato".
 
+## Le coordinate non sono quelle del tracking
+
+`x_start`/`y_start`/`x_end`/`y_end` sono **normalizzate sulla direzione d'attacco**:
+quando la squadra in possesso attacca `right_to_left` (colonna `attacking_side`)
+sono il tracking ruotato di 180°, cioè x e y cambiano segno. Negli eventi si
+attacca quindi sempre verso +x; nel tracking no.
+
+Verificato sui `player_possession` delle 20 partite contro la posizione di tracking
+del portatore al `frame_start`: dopo la rotazione lo scarto mediano è fra 0 e
+0,26 m per partita. Chi mescola posizioni dei due file senza ruotare sbaglia
+metà campo. Vedi `explorations/03-calcolo-tau-opp.ipynb`, §4.
+
 ## Vocabolario delle zone
 
 Le stesse etichette compaiono anche in `phases_of_play`:

@@ -1,5 +1,5 @@
 # Analytics Cup — workbench.
-# Python 3.12. Venv: ~/Documents/Projects/sport_venvs/analytics_cup_project
+# Python 3.12. Venv: analytics_cup_project/.venv (in .gitignore)
 #
 # NOTA: questo è il requirements del WORKBENCH, volutamente largo.
 # Il requirements.txt della submission va tenuto MINIMO: solo ciò che
@@ -54,3 +54,6 @@ skillcornerviz>=1.2
 
 # --- Utility ---
 tqdm>=4.66
+scipy>=1.11           # lib/pressione.py: brentq per il tempo di arrivo
+pypdf>=4.0            # estrazione del testo dai paper in docs/
+pytest>=8             # tests/: criteri di stop dei /goal

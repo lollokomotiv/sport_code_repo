@@ -14,12 +14,14 @@ Ordinate per verdetto, non alfabeticamente.
 | Scheda | Cosa misura | Dati richiesti | Verdetto |
 |---|---|---|---|
 | [pressione-tempo-arrivo](pressione-tempo-arrivo.md) | pressione sul portatore = tempo minimo di arrivo dell'avversario più vicino | tracking + eventi, 25 fps, 306 partite | **Replicabile con riserve** — dipende dai giocatori *vicini* alla palla, dove i nostri dati sono migliori |
+| [pressing-exPressV2](pressing-exPressV2.md) | probabilità che un pressing recuperi palla, e merito individuale | tracking + eventi, 25 Hz, 36 partite | **Adattabile** — impostazione e etichette trasferibili, la GNN no: batte la regressione logistica di 0,013 di AUC |
 
 ## Da leggere
 
 | File | pp. | Priorità |
 |---|---|---|
-| `Pressing_Intensity-An_Intuitive_Measure_for_Pressing_in_Soccer.pdf` | 8 | **prossimo** — stessa famiglia della scheda sopra, citato da essa (Bekkers 2025, arXiv v2) |
+| `Pressing_Intensity-An_Intuitive_Measure_for_Pressing_in_Soccer.pdf` | 8 | **prossimo** — citato da entrambe le schede; exPressV2 lo usa per definire cosa conta come pressing. Implementato in `unravelsports` |
+| `exPressV2_Contextual_Evaluation_Pressing.pdf` ✅ | 13 | fatto — aggiunto dopo, non era fra i paper originali |
 | `Blame_is_easier_than_praise.pdf` | 27 | alta — valutazione difensiva senza palla |
 | `Quantifying...` ✅ | 11 | fatto |
 | `Better_Prevent_than_Tackle.pdf` | 28 | |
@@ -53,6 +55,7 @@ Il testo è estraibile con lo script della skill; in sintesi:
 6. **Adattamento all'avversario** — la forma difensiva in funzione della struttura di costruzione avversaria
 
 > **Correzione al documento:** dice «circa 10 partite, controlla il numero
-> esatto». Sono **20**: il dataset è cresciuto dopo l'edizione 2026. Non cambia
-> la conclusione sul metodo (ghosting e GNN restano poco praticabili), ma
-> raddoppia il campione rispetto al repo citato.
+> esatto». Sono **20**: il dataset è cresciuto dopo l'edizione 2026. Raddoppia il
+> campione rispetto al repo citato. Sul metodo la conclusione va sfumata: il
+> ghosting resta poco praticabile, una GNN si addestra (exPressV2, 36 partite)
+> ma guadagna poco su un modello semplice.

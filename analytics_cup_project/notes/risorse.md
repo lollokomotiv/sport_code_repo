@@ -83,10 +83,11 @@ e modelli spaziali se non li hai mai implementati.
 Graph neural network su dati di tracking: ogni frame diventa un grafo
 giocatori-nodi. Richiede Python ≥3.11 e porta dietro tensorflow — pesante.
 
-**Nota sul campione:** con 20 partite, addestrare una GNN è quasi certamente
-sovradimensionato. Il vincitore 2026 ha scelto l'ottimizzazione matematica
-*proprio perché* il ML non regge su questi volumi, e lo ha scritto nell'abstract.
-Se vai di GNN devi poter difendere quella scelta.
+**Nota sul campione:** una GNN su questi volumi si addestra — exPressV2 lo fa
+su 36 partite — ma nel loro caso guadagna 0,013 di AUC su una regressione
+logistica con le stesse feature. Se vai di GNN devi poter mostrare che il
+margine giustifica la perdita di interpretabilità. Vedi
+`notes/letteratura/pressing-exPressV2.md`.
 
 ### [Visual Exploratory Behaviour](https://github.com/USSF-ARTS/) — U.S. Soccer Federation
 Analisi dello *scanning*: quante volte un giocatore gira la testa prima di

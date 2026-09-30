@@ -110,6 +110,30 @@ df = ds.transform(to_orientation="STATIC_HOME_AWAY").to_df(engine="polars")
 A 10 fps una partita intera è ~956.000 righe in formato lungo: durante lo sviluppo
 conviene sempre un `limit` o un `sample_rate`.
 
+## Le traiettorie arrivano già lisciate
+
+Misurato sulla partita 1886347. Derivando le velocità per differenze semplici,
+senza nessuna lisciatura:
+
+| | valore |
+|---|---|
+| velocità sopra i 10 m/s | **0,0%** |
+| accelerazione al 99° percentile | **4,5 m/s²** |
+| accelerazioni sopra gli 8 m/s² | 0,05% |
+| variazione di velocità fra frame consecutivi, 99° percentile | 0,46 m/s |
+
+Sono valori fisiologicamente plausibili, e una lisciatura Savitzky–Golay da 5 a
+15 frame li sposta di pochi centesimi. SkillCorner consegna quindi traiettorie
+già filtrate: **le velocità si possono ricavare con una derivata centrale
+semplice**, senza lisciatura aggiuntiva. Aggiungerla introdurrebbe solo ritardo.
+
+Riferimento esterno per le velocità di punta: `psv99` negli aggregati fisici ha
+mediana 28,3 km/h (7,85 m/s) e massimo stagionale 32,3 km/h (8,97 m/s).
+
+**Le posizioni estrapolate sono lisce quanto quelle osservate.** L'estrapolazione
+produce traiettorie plausibili, quindi non la si riconosce dalla cinematica: per
+distinguerla serve `is_detected`, sempre.
+
 ## `image_corners_projection`
 
 Non ancora sfruttato. Dà la porzione di campo inquadrata frame per frame, quindi

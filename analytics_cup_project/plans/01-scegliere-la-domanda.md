@@ -104,6 +104,55 @@ che aveva?"*.
 posizione, e la scelta era quella giusta? Si confronta l'esito atteso delle due
 alternative, cioè il framing di VAEP applicato alla difesa.
 
+#### Cosa esiste già (ricerca del 26/09/2026)
+
+**Il "tipo di difensore" da solo non è una novità.** I provider lo fanno già:
+
+| Chi | Cosa fa | Cosa non fa |
+|---|---|---|
+| **Hudl StatsBomb — [DefR](https://www.hudl.com/blog/defensive-responsibility-defr-statsbomb)** | per ogni azione avversaria stima quale difensore avrebbe dovuto intervenire; 4 archetipi da proattività × soppressione (Upamecano proattivo ed efficace, Rouault proattivo ma permissivo, Rüdiger passivo e permissivo, Delprato passivo ma efficace) | solo dati evento, livello stagione, nessuna valutazione della singola scelta |
+| **SkillCorner** | tassonomia degli ingaggi con *Jockeying / Holding Ground* distinto dalla pressione; profili dei centrali (stepping forward, covering space in behind, recovery runs) | profili come **frequenze in z-score**: dicono quanto spesso esce, non se ha fatto bene |
+| **Opta Vision** | Pressure Intensity sui 3 difensori più vicini, corse difensive senza palla | misura la pressione, non la scelta |
+
+**Il lavoro accademico più vicino è exPressV2** (Lee et al., MLSA 2025,
+[scheda](../notes/letteratura/pressing-exPressV2.md)): 36 partite, GRU + GAT,
+probabilità di recupero palla e merito individuale. Ma **seleziona sull'azione**
+— analizza solo i momenti in cui il pressing c'è già — quindi non può dire nulla
+sulla scelta di non pressare. È esattamente lo spazio della pista B.
+
+Metodologicamente utile anche *Tackling Causality* (football americano, Sloan):
+tratta l'azione del difensore come un **trattamento** e ne stima l'effetto con
+stimatori *doubly robust*. Per "esce o tiene" è l'impostazione più solida, e
+17.445 eventi sono il campione che le serve.
+
+#### La riformulazione: decisione contro esecuzione
+
+DefR dice che Rouault è *proattivo ma permissivo*, ma non perché. Può uscire nei
+momenti sbagliati — problema di **decisione** — oppure uscire nei momenti giusti
+e perdere il duello — problema di **esecuzione**. **Separare le due cose è il
+contributo che manca**, e nessun provider lo offre.
+
+#### Il disegno: selezionare sulla situazione, non sull'azione
+
+1. **La situazione**: momenti in cui un difensore *avrebbe potuto* uscire, per
+   esempio perché il suo tempo di arrivo sul portatore (`τ_opp`, pista A) era
+   sotto una soglia.
+2. **Il trattamento**: è uscito (`pressure`, `pressing`) oppure ha tenuto.
+3. **L'esito**: recupero, interruzione, pericolo ridotto, oppure battuto.
+4. **Il confronto**: effetto dell'uscita a parità di situazione, con
+   aggiustamento per ciò che rende una situazione più adatta a uscire.
+
+**Il gruppo "tiene" potrebbe essere già etichettato.** Il sottotipo `other` degli
+`on_ball_engagement` (3.251 eventi su 20 partite) ha il profilo atteso
+dall'*Holding Ground*: è il più lento (velocità mediana 10,3 contro 14,0 di
+`pressure`), quello in cui il difensore si muove meno (2,7 m contro 5,7), il più
+breve (1,1 s), e parte già più vicino al portatore. **È una compatibilità, non
+una conferma**: la documentazione non dice cosa ci sia dentro `other`.
+
+Resta un problema di selezione: quando il difensore non entra in contatto con il
+portatore non nasce nessun evento. Il gruppo "tiene" va quindi costruito anche
+dal tracking, non solo dagli eventi.
+
 **Due livelli, con campioni diversi.** È la parte che rende la pista praticabile:
 
 | | Livello 1 — la scelta | Livello 2 — l'intenzione |
@@ -117,8 +166,8 @@ non trascina giù il resto.
 
 | | |
 |---|---|
-| **Dato che serve** | `on_ball_engagement` (sottotipo, `frame_start`/`frame_end`), tracking, `end_type` del possesso |
-| **Cosa la minaccia** | definire l'alternativa controfattuale "tiene la posizione" senza un modello di ghosting |
+| **Dato che serve** | `on_ball_engagement` (sottotipo, `frame_start`/`frame_end`), tracking, esiti (`end_type`, `pressing_chain_end_type`) |
+| **Cosa la minaccia** | costruire il gruppo "tiene" senza selezionarlo sull'esito; il 60% delle catene di pressing ha esito vuoto (948 su 1.567), da chiarire prima di usarlo come etichetta |
 | **Perché regge** | gli ingaggi sono ravvicinati per definizione, quindi cadono dove tracking (87%) e pose (77%) funzionano meglio |
 | **Figura** | una: esito atteso uscita vs mantenimento, o la mappa delle scelte |
 
@@ -130,8 +179,32 @@ un esempio di orientamento delle spalle in `src/features/pose_orientation.py`.
 
 ### A o B?
 
-Non sono alternative pulite. La robustezza all'estrapolazione (pista A) potrebbe
-essere **la validazione** della pista B invece di un lavoro separato: se il
-modello della scelta poggia su posizioni ricostruite, va detto quanto.
+**Non sono più alternative.** Il disegno della pista B usa `τ_opp` per definire
+le situazioni in cui un difensore poteva uscire: la pista A diventa un pezzo
+della B, e la robustezza all'estrapolazione ne diventa la validazione.
 
-Da decidere prima di scrivere codice.
+L'ordine di lavoro che ne segue:
+
+1. **`τ_opp` sui nostri dati** (replica di Narizuka) — serve a entrambe
+2. **Che cosa c'è dentro `other`** — se è *Holding Ground*, il gruppo "tiene" è
+   già in parte etichettato
+3. **Che cosa significa l'esito vuoto** delle catene di pressing
+4. **Il confronto uscita / mantenimento** a parità di situazione
+5. **Robustezza**: lo stesso confronto ristretto alle situazioni interamente
+   osservate
+6. **Il body pose**, solo dopo, come dimostrazione di metodo sulle 2 partite
+
+### Sul metodo: interpretabile per scelta, non per necessità
+
+Finora questo piano diceva che con 20 partite una GNN non è praticabile.
+**exPressV2 lo smentisce**: 36 partite, una GRU + GAT, risultati utilizzabili.
+
+La stessa tabella però mostra che la rete guadagna **0,013 di AUC** su una
+regressione logistica con le stesse feature (0,731 contro 0,718), senza
+intervalli di confidenza e con 6 partite di test. Su questo volume un modello
+lineare ottiene quasi tutto il segnale.
+
+Quindi la ragione per gli approcci interpretabili non è che le alternative siano
+impossibili: è che **non guadagnano abbastanza da giustificare la perdita di
+interpretabilità**, davanti a una giuria che chiederà come è calcolato ogni
+numero.

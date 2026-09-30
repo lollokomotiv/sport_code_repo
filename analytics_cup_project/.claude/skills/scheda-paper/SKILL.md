@@ -38,7 +38,7 @@ paper, non hai finito di leggerlo.
 ### 1. Estrai il testo
 
 ```bash
-V=~/Documents/Projects/sport_venvs/analytics_cup_project/bin
+V=.venv/bin
 S=.claude/skills/scheda-paper/scripts/estrai_testo.py
 
 $V/python $S docs --elenco                    # cosa c'è, con le pagine
@@ -194,15 +194,28 @@ che chiede come è calcolato.
 
 ### Il vincolo sul campione
 
-Con 20 partite, ghosting e graph neural network in stile DEFCON non sono
-praticabili, e dirlo è più forte che provarci. Il vincitore dell'edizione 2026 ha
-scelto l'ottimizzazione matematica **proprio perché** il ML non reggeva su quel
-volume, e lo ha scritto nell'abstract.
+Non dire che un metodo di deep learning "non è praticabile" con 20 partite:
+exPressV2 (`notes/letteratura/pressing-exPressV2.md`) addestra una GRU + GAT su
+36 partite e ottiene risultati utilizzabili. La domanda giusta è un'altra:
+**quanto guadagna rispetto a un modello semplice?** Nel loro caso 0,013 di AUC
+su una regressione logistica con le stesse feature.
 
-Gli approcci che reggono: **fisici** (modelli di tempo di arrivo, controllo dello
-spazio), **interpretabili** (template matching, regole), **bayesiani** (HMM,
-modelli gerarchici). Quando un paper usa una di queste famiglie, il verdetto
-parte avvantaggiato.
+Quindi, davanti a un paper con un modello complesso, cerca **la tabella con le
+baseline** e riporta il margine nella scheda. Se il paper non ha baseline
+semplici, è un limite da scrivere. E controlla che il testo dica il vero sulla
+tabella: exPressV2 si dichiara migliore "su tutte le metriche" e non lo è sulla
+log loss.
+
+Gli approcci che partono avvantaggiati sono quelli **fisici** (modelli di tempo
+di arrivo, controllo dello spazio), **interpretabili** (template matching,
+regole) e **bayesiani** (HMM, modelli gerarchici) — non perché le alternative
+siano impossibili, ma perché davanti a una giuria ogni numero va spiegato. Il
+vincitore dell'edizione 2026 ha scelto l'ottimizzazione matematica per questa
+ragione, e lo ha scritto nell'abstract.
+
+Il ghosting resta un caso a parte: simula il comportamento *medio* dei difensori,
+e stimare una distribuzione di comportamenti richiede molto più dati che stimare
+una probabilità di esito.
 
 ---
 

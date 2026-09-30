@@ -30,3 +30,10 @@ analytics_cup_project/submission/
 # sotto copyright dell'editore. Quello che vale sta nelle schede in
 # analytics_cup_project/notes/letteratura/, che sono versionate.
 analytics_cup_project/docs/
+
+# Analytics Cup: configurazione locale di Obsidian (vault aperto sul workbench).
+# workspace.json cambia a ogni apertura: non è materiale di progetto.
+analytics_cup_project/.obsidian/
+
+# Analytics Cup: venv del workbench (Python 3.12.8), creato da requirements.txt.
+analytics_cup_project/.venv/
