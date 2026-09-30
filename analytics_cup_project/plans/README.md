@@ -6,7 +6,7 @@ precedente: non saltare avanti.
 | # | Filone | Stato |
 |---|---|---|
 | [00](00-capire-i-dati.md) | Capire i dati e quantificarne i limiti | Estrapolazione misurata su 1 partita; da estendere a tutte |
-| [01](01-scegliere-la-domanda.md) | Scegliere track e domanda | Bloccato da 00 |
+| [01](01-scegliere-la-domanda.md) | Scegliere track e domanda | In corso: A confluita in B come passo e validazione; `τ_opp` replicato, prossimo passo τ per difensore |
 | [02](02-costruire-la-submission.md) | Costruire la submission | Bloccato da 01 |
 
 **Regola:** quando emerge un problema che non si chiude subito, va annotato nel

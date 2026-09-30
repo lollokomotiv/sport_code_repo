@@ -88,6 +88,35 @@ validata altrove**, usata come banco di prova.
 È anche l'unica pista che trasforma il limite principale dei nostri dati da
 problema in oggetto di studio. Le altre lo subiscono.
 
+#### Dopo la replica (30/09/2026)
+
+`τ_opp` è calcolato su 17.674 possessi delle 20 partite
+([`reports/tau_opp.md`](../reports/tau_opp.md),
+[`explorations/03`](../explorations/03-calcolo-tau-opp.ipynb)). Come domanda a
+sé, la pista A si è ristretta:
+
+- **l'avversario decisivo è estrapolato solo nel 3,3% dei possessi** (573), e
+  più spesso dove la pressione è bassa: 2,6% nel quartile più pressato, 5,0% nel
+  meno pressato. La telecamera segue la pressione. Buona notizia per chi usa la
+  misura, poca sostanza per una submission. La scheda si aspettava circa il 13%:
+  la differenza è da capire;
+- **"ricalcolare sulle sole posizioni osservate" è mal posto**: togliere un
+  avversario può solo alzare τ, quindi lo scostamento è positivo per costruzione.
+  E la posizione vera dell'estrapolato non la conosciamo. Serve un altro disegno,
+  per esempio il salto di posizione quando un giocatore rientra in inquadratura;
+- **pressione → perdita è debole e non monotona** già su tutti i dati (ρ = −0,05
+  nei possession play). Chiedersi se "sopravvive" sugli osservati non ha senso
+  finché non si capisce perché non si replica;
+- **la velocità pesa quanto l'estrapolazione, forse di più**: nel possesso
+  d'esempio sposta τ di circa 0,1 s e cambia l'avversario decisivo. Le velocità
+  vengono da differenze a 10 fps, con picchi fino a 13,9 m/s;
+- **il confronto con `time_to_impact` (ρ = −0,86) non è ancora una validazione
+  esterna**: se anche il loro modello è un tempo di arrivo, le due misure non
+  sono indipendenti. Da verificare nel glossario SkillCorner.
+
+Conclusione: A resta come passo e validazione della B (vedi «A o B?» sotto), non
+come domanda autonoma.
+
 
 ### B — «Esce o tiene?»: la scelta del difensore
 
@@ -135,8 +164,9 @@ contributo che manca**, e nessun provider lo offre.
 #### Il disegno: selezionare sulla situazione, non sull'azione
 
 1. **La situazione**: momenti in cui un difensore *avrebbe potuto* uscire, per
-   esempio perché il suo tempo di arrivo sul portatore (`τ_opp`, pista A) era
-   sotto una soglia.
+   esempio perché il **suo** tempo di arrivo sul portatore τ_p era sotto una
+   soglia. Non basta `τ_opp`, che è il minimo sugli avversari e dice solo chi
+   arriva primo: serve il τ di ogni difensore (`lib.pressione.tempi_arrivo`).
 2. **Il trattamento**: è uscito (`pressure`, `pressing`) oppure ha tenuto.
 3. **L'esito**: recupero, interruzione, pericolo ridotto, oppure battuto.
 4. **Il confronto**: effetto dell'uscita a parità di situazione, con
@@ -185,14 +215,25 @@ della B, e la robustezza all'estrapolazione ne diventa la validazione.
 
 L'ordine di lavoro che ne segue:
 
-1. **`τ_opp` sui nostri dati** (replica di Narizuka) — serve a entrambe
-2. **Che cosa c'è dentro `other`** — se è *Holding Ground*, il gruppo "tiene" è
+1. ~~**`τ_opp` sui nostri dati** (replica di Narizuka)~~ — fatto il 30/09/2026,
+   vedi «Dopo la replica» nella pista A
+2. **τ per difensore e sensibilità alle velocità**: quanto cambia τ_p con
+   velocità azzerate o disturbate, e quanto spesso cambia *chi* arriva primo. Nel
+   possesso d'esempio tre avversari arrivano entro 0,1 s l'uno dall'altro: se
+   l'identità del difensore "che poteva uscire" dipende da errori di quell'ordine,
+   il gruppo di trattamento è instabile. Va misurato prima di costruirlo
+3. **Che cosa c'è dentro `other`** — se è *Holding Ground*, il gruppo "tiene" è
    già in parte etichettato
-3. **Che cosa significa l'esito vuoto** delle catene di pressing
-4. **Il confronto uscita / mantenimento** a parità di situazione
-5. **Robustezza**: lo stesso confronto ristretto alle situazioni interamente
-   osservate
-6. **Il body pose**, solo dopo, come dimostrazione di metodo sulle 2 partite
+4. **Che cosa significa l'esito vuoto** delle catene di pressing
+5. **Il confronto uscita / mantenimento** a parità di situazione
+6. **Robustezza**: lo stesso confronto ristretto alle situazioni interamente
+   osservate. Dal 3,3% misurato sulla replica ci si aspetta una verifica breve,
+   perché gli ingaggi cadono vicino al portatore
+7. **Il body pose**, solo dopo, come dimostrazione di metodo sulle 2 partite
+
+Nota per ogni join fra eventi e tracking: le coordinate degli eventi sono quelle
+del tracking ruotate di 180° quando la squadra attacca `right_to_left`
+([`notes/dati/dynamic-events.md`](../notes/dati/dynamic-events.md)).
 
 ### Sul metodo: interpretabile per scelta, non per necessità
 
