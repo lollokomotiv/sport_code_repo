@@ -93,9 +93,10 @@ Meno di quanto sembri, perché i pezzi esistono quasi tutti.
   **~217**: la definizione è molto diversa, e i numeri non sono confrontabili
   senza allinearla.
 
-`unravelsports` è commentato nel `requirements.txt` perché si porta dietro
-TensorFlow: per usare solo la Pressing Intensity conviene valutare se il modulo
-si importa da solo.
+`unravelsports` è installato: le dipendenze di base sono solo kloppy, polars e
+scipy, e TensorFlow serve solo per le GNN. La Pressing Intensity gira sui nostri
+dati via kloppy; primo confronto con τ_opp su una partita in
+[`explorations/04`](../../explorations/04-pressing-intensity-unravel.ipynb).
 
 ## Il buco che lascia
 

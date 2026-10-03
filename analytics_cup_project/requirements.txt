@@ -22,9 +22,10 @@ kloppy>=3.19
 # (XY, Pitch, Events). Utile per metriche spaziali già implementate.
 floodlight>=1.2
 
-# databallpy: sincronizzazione tracking <-> eventi e feature di match.
-# Il suo punto di forza è proprio la sincronizzazione, che con dati
-# broadcast è tutt'altro che banale.
+# databallpy: feature su tracking (pitch control, pressione sul giocatore,
+# velocità). Su SkillCorner si usa via get_game_from_kloppy: get_game non lo
+# supporta, e la sincronizzazione con gli eventi non si applica (richiede un
+# provider di eventi supportato). Vedi notes/metriche-disponibili.md §3.2.
 databallpy>=0.8
 
 # --- Visualizzazione ---
@@ -40,15 +41,19 @@ mplsoccer>=1.8
 skillcornerviz>=1.2
 
 # --- Modelli e metodi ---
-# unravelsports: graph neural network su dati di tracking. Richiede Python>=3.11.
-# Pesante (tensorflow/spektral): installalo solo se vai in quella direzione.
-# unravelsports>=1.2
+# unravelsports: Pressing Intensity (Bekkers), formazioni (EFPI), grafi per GNN.
+# Le dipendenze di base sono solo kloppy, polars e scipy, già presenti.
+# tensorflow/torch servono solo per addestrare le GNN (extra "test"): non
+# installarli finché non vai in quella direzione.
+# Provato su una partita: explorations/04-pressing-intensity-unravel.ipynb.
+unravelsports>=1.2
 
 # socceraction: SPADL, VAEP, xT — dal gruppo ML-KULeuven.
 #
-# INCOMPATIBILE con floodlight in questo venv:
-#   floodlight 1.2.0  -> lxml>=5.3.0,<6.0.0
-#   socceraction 1.5.3 -> lxml>=4.9.3,<5.0.0
+# INCOMPATIBILE con questo venv, su tre pacchetti:
+#   lxml:   socceraction 1.5.3 vuole <5.0.0, floodlight 1.2.0 vuole >=5.3.0
+#   numpy:  socceraction vuole <2.0.0, il venv ha 2.2.6
+#   pandas: socceraction vuole <3.0.0 (oggi compatibile, 2.3.3)
 #
 # Escluso perché è il meno essenziale dei due qui: nasce su dati EVENTO, non
 # tracking, e serve come riferimento concettuale per le superfici di valore

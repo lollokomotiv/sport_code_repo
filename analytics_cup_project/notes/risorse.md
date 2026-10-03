@@ -33,14 +33,21 @@ e il secondo tempo hanno le direzioni di attacco invertite, e qualunque metrica
 spaziale aggregata sui due tempi è sbagliata.
 
 ### [databallpy](https://github.com/Alek050/databallpy) — `pip install databallpy`
-Sincronizzazione tracking ↔ eventi e feature di partita. Il valore vero è la
-sincronizzazione: con dati broadcast, allineare il timestamp dell'evento al
-frame giusto è un problema serio, e averlo già risolto vale.
+Sincronizzazione tracking ↔ eventi e feature di partita. **La sincronizzazione
+qui non serve**: richiede un provider di eventi supportato (Opta, StatsBomb,
+Sportec…), e i dynamic events di SkillCorner sono già allineati al frame.
+
+Servono invece le feature. `get_game` non legge SkillCorner, ma
+`get_game_from_kloppy` sì: pitch control (Fernández & Bornn), pressione sul
+giocatore (Herold et al.), velocità e accelerazioni girano sui nostri dati. Il
+Voronoi approssimato no. Vedi `metriche-disponibili.md` §3.2.
 
 ### [floodlight](https://github.com/floodlight-sports/floodlight) — `pip install floodlight`
 Toolkit multi-sport con un modello dati proprio (`XY`, `Pitch`, `Events`) e
 metriche spaziali già implementate. Ha una curva di apprendimento sua: conviene
-se usi le sue metriche, non come semplice lettore.
+se usi le sue metriche, non come semplice lettore. **Come lettore non funziona
+qui**: il parser SkillCorner è per il dataset JSON del 2021 e fallisce sul JSONL
+attuale. I modelli si usano costruendo gli `XY` a mano.
 
 ---
 
@@ -76,12 +83,18 @@ Ricerca su imputazione di traiettorie e modelli su dati di tracking. Rilevante
 l'imputazione di traiettorie è la letteratura che se ne occupa.
 
 ### [Soccer Analytics Handbook](https://github.com/devinpleuler/analytics-handbook)
-Notebook introduttivi di Devin Pleuler. Buon punto di partenza per pitch control
-e modelli spaziali se non li hai mai implementati.
+Un notebook di esempi di Devin Pleuler (aggiornato a febbraio 2023), su dati
+StatsBomb e Metrica: visualizzazione, clustering, difficoltà del passaggio con
+XGBoost, e per il tracking traiettorie, corse ad alta intensità e **time to
+intercept**. Il pitch control non c'è più nella versione attuale.
 
 ### [unravelsports](https://github.com/UnravelSports/unravelsports) — `pip install unravelsports`
 Graph neural network su dati di tracking: ogni frame diventa un grafo
-giocatori-nodi. Richiede Python ≥3.11 e porta dietro tensorflow — pesante.
+giocatori-nodi. Contiene anche **Pressing Intensity** (Bekkers 2025) e il
+riconoscimento delle formazioni (EFPI). Richiede Python ≥3.11. Le dipendenze di
+base sono leggere (kloppy, polars, scipy); tensorflow e torch servono solo per
+addestrare le GNN. Installato nel venv; la Pressing Intensity gira sui nostri dati
+via kloppy, vedi `explorations/04-pressing-intensity-unravel.ipynb`.
 
 **Nota sul campione:** una GNN su questi volumi si addestra — exPressV2 lo fa
 su 36 partite — ma nel loro caso guadagna 0,013 di AUC su una regressione

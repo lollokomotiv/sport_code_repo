@@ -22,3 +22,17 @@ I `CLAUDE.md` delle sottocartelle non vengono caricati all'avvio di una sessione
 ## Contesto trasversale
 
 Questi progetti sono anche materiale di portfolio professionale. Vale ovunque: risultati validati e limiti dichiarati, invece di risultati che sembrano buoni. Se un numero è implausibile o la documentazione non descrive il codice reale, segnalalo.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `lollokomotiv/sport_code_repo`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: `CONTEXT-MAP.md` at the root, with a `CONTEXT.md` and `docs/adr/` inside each project. See `docs/agents/domain.md`.

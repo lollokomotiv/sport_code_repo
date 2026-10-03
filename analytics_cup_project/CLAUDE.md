@@ -55,8 +55,9 @@ costruisca progressivamente una comprensione di:
 
 - **Struttura dei dati** — quali file esistono, quali colonne e tipi, quale
   granularità, quali chiavi di join. I quattro file di una partita sono già
-  documentati in `notes/dati/`: leggi lì prima di riesplorare. Restano da coprire
-  gli aggregati stagionali e il body pose.
+  documentati in `notes/dati/`: leggi lì prima di riesplorare. Il body pose è in
+  `notes/dati/bodypose.md`, gli aggregati stagionali e tutte le metriche già
+  calcolate (SkillCorner e librerie) in `notes/metriche-disponibili.md`.
 - **Semantica del dominio** — cosa rappresentano concretamente le metriche
   SkillCorner (distanza percorsa, sprint count, PSV99, off-ball runs, metriche di
   pressing e di spazio) e come si legano al contesto sportivo: ruolo, fase di

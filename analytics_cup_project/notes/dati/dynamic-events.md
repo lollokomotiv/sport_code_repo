@@ -80,19 +80,23 @@ soli.
 
 Qui il file smette di descrivere e comincia a **stimare**:
 
-| Colonna | Cosa stima |
-|---|---|
-| `xthreat` | minaccia generata |
-| `xpass_completion` | probabilità di riuscita del passaggio |
-| `xshot_player_possession_{start,end,max}` | probabilità di tiro |
-| `xloss_player_possession_{start,end,max}` | probabilità di perdere palla |
-| `possession_epv_*`, `pass_epv_*` | expected possession value, per e contro |
-| `reception_difficulty_start` | difficoltà del controllo |
-| `space_constraint_start` | spazio disponibile |
-| `overall_pressure_{start,end}` | pressione subita |
-| `time_to_impact_{start,end}` | tempo prima dell'intervento avversario |
-| `passing_option_ease_{start,end}` | facilità dell'opzione di passaggio |
-| `separation_{start,end,gain}` | distacco dal marcatore |
+| Colonna | Cosa stima | Su quali righe |
+|---|---|---|
+| `xthreat` | probabilità di gol entro 10 s se il giocatore riceve un passaggio riuscito | `passing_option`, `off_ball_run` (e `player_targeted_xthreat` sui possessi) |
+| `xpass_completion` | probabilità di riuscita del passaggio verso il giocatore | come sopra |
+| `xshot_player_possession_{start,end,max}` | probabilità che il possesso finisca con un tiro | **solo `on_ball_engagement`**: descrive il possesso ingaggiato |
+| `xloss_player_possession_{start,end,max}` | probabilità di perdere palla nel possesso | **solo `on_ball_engagement`** |
+| `possession_epv_*`, `pass_epv_*` | expected possession value, per e contro | solo `player_possession` |
+| `reception_difficulty_start` | difficoltà del controllo | solo `player_possession` |
+| `space_constraint_start` | spazio disponibile | solo `player_possession` |
+| `overall_pressure_{start,end}` | pressione subita | solo `player_possession` |
+| `time_to_impact_{start,end}` | tempo prima dell'intervento avversario | solo `player_possession` |
+| `passing_option_ease_{start,end}` | facilità dell'opzione di passaggio | solo `player_possession` |
+
+`separation_{start,end,gain}`, che stava in questa tabella, non è un modello: è la
+distanza dall'avversario più vicino [specifiche p.64]. Definizioni, modelli,
+copertura e livello di documentazione di ogni metrica sono in
+[`../metriche-disponibili.md`](../metriche-disponibili.md) §1.2.
 
 Sono una scorciatoia potente e sono anche un rischio: **output di modelli chiusi di
 terze parti**. Un risultato costruito sopra eredita assunzioni che non puoi

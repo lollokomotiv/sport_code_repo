@@ -53,7 +53,10 @@ match.json ──player_id──> tracking.jsonl <──frame── dynamic_even
 | `data/aggregates/aus1league_passingaggregates_20242025.csv` | passaggi aggregati |
 | `data/bodypose/` | 3D body pose, 29 giunti, 25 fps — **solo 2 partite** → [bodypose.md](bodypose.md) |
 
-Gli aggregati stagionali e `matches.json` **non sono ancora documentati**.
+Gli aggregati stagionali sono descritti in
+[`../metriche-disponibili.md`](../metriche-disponibili.md) §1.5: come si leggono i
+nomi delle colonne (medie per partita, `tip`/`otip`/`bip`, `p30tip`) e le
+definizioni fisiche. `matches.json` **non è ancora documentato**.
 
 ## Le tre cose da sapere prima di usare qualsiasi cosa
 

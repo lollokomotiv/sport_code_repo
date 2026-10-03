@@ -12,7 +12,8 @@ caricamento dati (vedi [`../plans/02-costruire-la-submission.md`](../plans/02-co
 | [00](00-quanto-e-osservato.ipynb) | Quanto di questo tracking è davvero osservato e non estrapolato? | **59%** su una partita intera. 87% vicino alla palla, 18% oltre i 40 m, 15% per il portiere. |
 | [01](01-struttura-dei-file-match.ipynb) | Cosa contengono i quattro file di una partita e come si collegano? | `frame` è la chiave universale. Documentato file per file in [`notes/dati/`](../notes/dati/). |
 | [02](02-body-pose.ipynb) | Quanto del body pose è davvero utilizzabile? | **45,7%** dei giocatori in campo (non 31%: conta il denominatore). 77% vicino alla palla, 10% oltre i 40 m. Busto preciso a 6 cm, estremità a 21. |
-| [03](03-calcolo-tau-opp.ipynb) | Come si calcola τ_opp (Narizuka et al.) sui dati SkillCorner, passo per passo? | Modello, primo attraversamento, velocità per derivata centrale, un possesso spiegato. Coincide con `scripts/calcola_tau.py` e con `reports/tau_opp.csv`. |
+| [03](03-calcolo-tau-opp.ipynb) | Come si calcola τ_opp (Narizuka et al.) sui dati SkillCorner, passo per passo? | Modello, primo attraversamento, velocità per derivata centrale, un possesso spiegato. Coincide con `scripts/calcola_tau.py` e con `reports/tau_opp.csv`. §10: confronto con `time_to_impact`. |
+| [04](04-pressing-intensity-unravel.ipynb) | La Pressing Intensity di unravelsports gira sui nostri dati, e sul portatore dice la stessa cosa di τ_opp? | Gira via kloppy. Su una partita il TTI minimo sul portatore concorda poco con τ_opp (ρ = 0,65) e con `time_to_impact` (−0,67, contro −0,86 di τ_opp). Soglia di 0,7 s; nel 16% dei possessi la squadra in possesso non coincide con quella SkillCorner. |
 
 ## Come eseguirli
 
