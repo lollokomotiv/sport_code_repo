@@ -30,6 +30,13 @@ INK, MUTED = "#e8eaed", "#9aa0a6"
 
 _OFFSET_ETICHETTE = [2.6, -2.6, 4.6, -4.6, 6.6]
 
+_TESTI = {
+    "it": {"in_corso": "   ● in corso", "osservati": "giocatori osservati",
+           "contorno": "contorno bianco = posizione estrapolata"},
+    "en": {"in_corso": "   ● in play", "osservati": "players seen by the camera",
+           "contorno": "white outline = position estimated off camera"},
+}
+
 
 def anima_intervallo(
     match_id: int,
@@ -40,14 +47,24 @@ def anima_intervallo(
     padding: int = 20,
     titolo: str = "",
     figsize: tuple[float, float] = (10, 6.6),
+    writer=None,
+    dpi: float | None = None,
+    fonte: str = "",
+    lingua: str = "it",
+    scala: float = 1.0,
 ) -> Path:
-    """Anima un intervallo di frame e salva una GIF.
+    """Anima un intervallo di frame e salva una GIF (o, con `writer`, un video).
 
     `evidenzia` mappa `player_id -> etichetta`: quei giocatori sono disegnati più
     grandi, con la scia del percorso osservato e il nome accanto.
 
     La scia usa solo le posizioni con `is_detected=True`: un percorso non deve
     mostrare tratti che la telecamera non ha visto.
+
+    `writer` (default: GIF a 10 fps), `dpi`, `fonte`, `lingua` ("it"/"en") e
+    `scala` (dei testi) servono a `lib/social.py` per i formati dei post: la
+    fonte è scritta nell'immagine perché un media ripubblicato da solo deve dire
+    da dove viene.
     """
     meta = data.load_match_meta(match_id)
     evidenzia = evidenzia or {}
@@ -73,6 +90,9 @@ def anima_intervallo(
     )
     fig, ax = pitch.draw(figsize=figsize)
     fig.set_facecolor(BG)
+    if fonte:
+        fig.text(0.01, 0.012, fonte, color=MUTED, fontsize=8 * scala, ha="left", va="bottom")
+    testi = _TESTI[lingua]
 
     punti = ax.scatter([], [], s=170, zorder=3)
     palla = ax.scatter([], [], s=70, c=BALL_C, edgecolors=BG, linewidths=1.2, zorder=5)
@@ -80,8 +100,8 @@ def anima_intervallo(
             for pid in evidenzia}
     storia = {pid: ([], []) for pid in evidenzia}
 
-    testo_titolo = ax.set_title("", color=INK, fontsize=10.5, loc="left", pad=14)
-    etichette = [ax.text(0, 0, "", color=INK, fontsize=8.5, ha="center", zorder=6)
+    testo_titolo = ax.set_title("", color=INK, fontsize=10.5 * scala, loc="left", pad=14)
+    etichette = [ax.text(0, 0, "", color=INK, fontsize=8.5 * scala, ha="center", zorder=6)
                  for _ in evidenzia]
 
     def disegna(i):
@@ -128,16 +148,17 @@ def anima_intervallo(
         dentro = frame_start <= fr["frame"] <= frame_end
         det = sum(p["is_detected"] for p in fr["player_data"])
         testo_titolo.set_text(
-            f"{titolo}{'   ● in corso' if dentro and titolo else ''}\n"
-            f"{fr['timestamp']}   ·   {det}/{len(fr['player_data'])} giocatori osservati"
-            "   ·   contorno bianco = posizione estrapolata"
+            f"{titolo}{testi['in_corso'] if dentro and titolo else ''}\n"
+            f"{fr['timestamp']}   ·   {det}/{len(fr['player_data'])} {testi['osservati']}"
+            f"   ·   {testi['contorno']}"
         )
         return [punti, palla, *scie.values(), testo_titolo, *etichette]
 
     anim = FuncAnimation(fig, disegna, frames=len(frames), interval=100, blit=False)
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    anim.save(str(output), writer=PillowWriter(fps=10), savefig_kwargs={"facecolor": BG})
+    anim.save(str(output), writer=writer or PillowWriter(fps=10), dpi=dpi,
+              savefig_kwargs={"facecolor": BG})
     plt.close(fig)
     matplotlib.use(backend)
     return output

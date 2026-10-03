@@ -37,3 +37,9 @@ analytics_cup_project/.obsidian/
 
 # Analytics Cup: venv del workbench (Python 3.12.8), creato da requirements.txt.
 analytics_cup_project/.venv/
+
+# Analytics Cup: i video dei post si rigenerano dallo script che li produce.
+analytics_cup_project/figures/post/*.mp4
+
+# Analytics Cup: dati intermedi dei report, rigenerabili con scripts/ (~6 MB l'uno).
+analytics_cup_project/reports/*.csv

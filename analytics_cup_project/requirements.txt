@@ -28,6 +28,10 @@ floodlight>=1.2
 databallpy>=0.8
 
 # --- Visualizzazione ---
+# imageio-ffmpeg: ffmpeg statico via pip, per gli MP4 dei post (lib/social.py).
+# Evita di dipendere da un ffmpeg di sistema.
+imageio-ffmpeg>=0.6
+
 # mplsoccer: campi e chart per matplotlib. Già usato in xgoals_project.
 mplsoccer>=1.8
 

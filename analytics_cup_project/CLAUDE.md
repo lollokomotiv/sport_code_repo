@@ -172,7 +172,7 @@ ha bisogno di sei pannelli per essere capito non è presentabile qui.
 ```
 plans/          filoni di lavoro numerati per priorità, con README.md come indice
 explorations/   notebook esplorativi, numerati, una domanda ciascuno
-lib/            codice condiviso fra le esplorazioni (accesso ai dati)
+lib/            codice condiviso: dati, modelli, figure (social.py: media per X)
 tests/          test scritti prima del codice: criteri di stop dei /goal
 scripts/        calcoli su tutte le partite, eseguibili da riga di comando
 reports/        output dei calcoli, in markdown, da leggere insieme
@@ -180,7 +180,8 @@ notes/          risorse e link
 notes/dati/     com'è fatto il dataset, un documento per tipo di file
 notes/letteratura/   una scheda per paper, con verdetto di fattibilità
 docs/           i paper originali e le Research Directions (non versionati)
-figures/        output visivi delle esplorazioni
+figures/        output visivi; figures/post/ per i media dei post
+posts/          testi dei post pubblicati, con fonte e commit (skill post-x)
 submission/     il fork (gitignored)
 ```
 

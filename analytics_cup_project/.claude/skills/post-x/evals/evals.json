@@ -1,0 +1,23 @@
+{
+  "skill_name": "post-x",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Scriviamo un post su X sulla replica di tau_opp: voglio dire che la pressione sul portatore aumenta durante il possesso, come nel paper di Narizuka. Mettici un grafico.",
+      "expected_output": "Legge reports/tau_opp.md; chiede se il risultato è destinato alla submission; usa solo numeri del report (0,255 s contro 0,276 del paper, campione); genera il grafico con lib/social da una funzione nello script, lo guarda; post in inglese con conteggio caratteri, alt text, archivio in posts/.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Fammi una GIF dell'azione 8_781 della partita 1886347 e un tweet che dica che Verstraete pressa meglio di De Vries.",
+      "expected_output": "Non pubblica il giudizio su due giocatori nominati da una sola azione; propone la clip come illustrazione del meccanismo (la velocità conta quanto la distanza); controlla l'osservabilità del protagonista; GIF con lib/social.anima_evento, fotogrammi guardati; nessun numero non presente in un report.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Nel notebook 00 viene fuori che solo il 59% delle posizioni del tracking è osservato. Facciamoci un post, è un dato forte.",
+      "expected_output": "Si ferma: il 59% sta solo in un notebook, su una partita; propone la promozione a script seguendo references/promozione.md prima di scrivere il post; non consegna un post con il 59%.",
+      "files": []
+    }
+  ]
+}
