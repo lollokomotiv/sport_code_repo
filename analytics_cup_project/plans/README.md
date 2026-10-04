@@ -6,11 +6,16 @@ precedente: non saltare avanti.
 | # | Filone | Stato |
 |---|---|---|
 | [00](00-capire-i-dati.md) | Capire i dati e quantificarne i limiti | Estrapolazione misurata su 1 partita; da estendere a tutte |
-| [01](01-scegliere-la-domanda.md) | Scegliere track e domanda | In corso: A confluita in B come passo e validazione; `τ_opp` replicato, prossimo passo τ per difensore |
+| [01](01-scegliere-la-domanda.md) | Scegliere track e domanda | In corso, rivisto il 04/10: test di equivalenza `time_to_impact` / τ_opp, poi tesi con il pose; pista B sospesa |
 | [02](02-costruire-la-submission.md) | Costruire la submission | Bloccato da 01 |
 
 **Regola:** quando emerge un problema che non si chiude subito, va annotato nel
 piano pertinente invece di restare in una conversazione.
+
+## La challenge
+
+Edizione 2.0: niente track, un tema per sport (calcio: *Defensive Positioning*).
+Cosa sappiamo e cosa cambia: [`notes/challenge.md`](../notes/challenge.md).
 
 ## Scadenze
 

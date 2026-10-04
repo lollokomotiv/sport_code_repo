@@ -15,6 +15,10 @@ cosa i dati reggono è il modo più comune di sprecare mesi.
 Nota per la 2027: è annunciata con *"due sport, due competizioni regionali, due
 finali"*. La struttura dei track potrebbe cambiare — verificare all'annuncio.
 
+**Aggiornamento del 04/10/2026: nell'edizione 2.0 i track non ci sono più**, e il
+tema per il calcio è *Defensive Positioning*. La tabella qui sopra resta come
+traccia. Dettagli e fonte in [`notes/challenge.md`](../notes/challenge.md).
+
 ## Il vincolo che stringe di più
 
 **Max 2 figure** (o 2 tabelle, o 1+1) e **500 parole** di abstract.
@@ -207,7 +211,96 @@ due, **entrambe come cosa che gli autori dichiarano di non aver usato** —
 Bischofberger nei lavori futuri, Narizuka nei limiti. E SkillCorner spedisce già
 un esempio di orientamento delle spalle in `src/features/pose_orientation.py`.
 
+### Revisione del 04/10/2026: prima `time_to_impact`, poi il pose
+
+**Da:** [`explorations/03`](../explorations/03-calcolo-tau-opp.ipynb) §10,
+[`explorations/04`](../explorations/04-pressing-intensity-unravel.ipynb),
+[`notes/metriche-disponibili.md`](../notes/metriche-disponibili.md).
+
+Tre misure della stessa famiglia sono ora sul tavolo: τ_opp (nostro, aperto),
+`time_to_impact` (SkillCorner, chiuso, 5 classi) e il tempo di intercetto della
+Pressing Intensity (unravelsports). Prima di costruire altro sopra τ_opp va
+deciso se serve calcolarlo, o se la misura SkillCorner basta.
+
+**Che cosa può sostituire `time_to_impact`, e che cosa no.** Nel piano τ_opp ha
+due ruoli:
+
+| Ruolo | Dove | `time_to_impact` lo sostituisce? |
+|---|---|---|
+| pressione sul portatore a inizio e fine possesso | replica di Narizuka | **da verificare**: è il test qui sotto |
+| tempo di ogni difensore sul portatore (τ_p) | pista B, passo 2 | **no, per costruzione**: una classe per possesso, senza il difensore |
+
+Per questo **la pista B è sospesa**, non abbandonata: richiede τ_p, che solo il
+calcolo nostro fornisce. Si riprende, o si chiude, dopo il test e la scelta della
+tesi.
+
+#### Il test di equivalenza (protocollo fissato prima dei risultati)
+
+*"Equivalente"* vuol dire: `time_to_impact` può sostituire τ_opp **come pressione
+sul portatore a inizio e fine possesso**. Le definizioni sono quelle di
+[`scripts/report_tau.py`](../scripts/report_tau.py), così il confronto è alla
+pari: progressione, zone, perdita di palla, esclusione dei portieri. Tutti i
+confronti usano **gli stessi possessi**, cioè quelli dove esistono entrambe le
+misure.
+
+1. **Pressione → avanzamento** (paper, Fig. 6): Spearman di ciascuna misura con la
+   progressione, nel complesso e nelle tre zone di campo.
+2. **Pressione → perdita** (paper, Fig. 7a): Spearman di ciascuna misura con la
+   perdita, separando possession play e direct play.
+3. **Informazione aggiuntiva, nei due sensi**: dentro ogni classe di
+   `time_to_impact`, τ_opp è ancora associato all'esito? E dentro ogni quintile di
+   τ_opp, lo è ancora `time_to_impact`? Si riporta ρ per strato e la media pesata
+   per numerosità.
+4. **Copertura**: quanti possessi perde chi usa solo `time_to_impact`, e di che
+   tipo.
+
+Criterio di uscita: i quattro confronti sono calcolati e riportati in
+`reports/equivalenza_tti.md`, prodotto da `scripts/equivalenza_tti.py`.
+Nessuna soglia sul risultato; l'interpretazione si fa insieme.
+
+**Numeri del 04/10/2026** ([`reports/equivalenza_tti.md`](../reports/equivalenza_tti.md)),
+interpretazione ancora da fare:
+
+| Esito | ρ τ_opp | ρ `time_to_impact` | τ_opp dentro le classi tti | tti dentro i quintili τ_opp |
+|---|---|---|---|---|
+| avanzamento (N = 12.804) | 0,277 | −0,154 | 0,294 | **+0,142** |
+| perdita, possession play (N = 10.229) | −0,056 | 0,152 | **+0,103** | 0,165 |
+| perdita, direct play (N = 2.666) | −0,066 | 0,146 | **+0,072** | 0,155 |
+
+- Nessuna delle due misure domina: τ_opp è più legata all'avanzamento,
+  `time_to_impact` alla perdita (dal 4,5% al 18,4% fra la classe 1 e la 5).
+- **Due inversioni di segno** negli strati, in grassetto: a parità di τ_opp, più
+  pressione SkillCorner va con più avanzamento; a parità di classe SkillCorner, più
+  tempo τ_opp va con più perdite. Prima di leggerle come effetti veri va escluso
+  un confondente: zona di campo e lunghezza del passaggio sono i primi candidati.
+- Usando solo `time_to_impact` si perdono 1.521 possessi all'inizio, il 78% dei
+  quali direct play (il 26,9% di tutti i direct play).
+
+#### Dopo il test: una tesi con il pose e le metriche SkillCorner
+
+Vincoli noti in anticipo:
+
+- **Il body pose copre 2 partite**, 45,7% utilizzabile
+  ([`explorations/02`](../explorations/02-body-pose.ipynb)). In locale c'è solo la
+  `1925299`; la `1996435` va scaricata. Una tesi sul pose è una **dimostrazione
+  di metodo**, non un risultato statistico.
+- **Le metriche SkillCorner possono fare da esito o da contesto**: pressione,
+  `reception_difficulty`, `forward_momentum`, `xloss`, EPV. Il pose aggiunge ciò
+  che nessuna di queste contiene: l'orientamento del corpo.
+
+Candidate, da scegliere dopo il test:
+
+- l'orientamento di **chi riceve**, prima della ricezione, rispetto alla
+  difficoltà e all'esito del possesso;
+- l'orientamento del **difensore** all'ingaggio rispetto all'esito: è il livello 2
+  della pista B, che però senza il livello 1 resta senza la parte statistica.
+
+Il risultato del test decide quale misura di pressione entra come contesto.
+
 ### A o B?
+
+*L'ordine di lavoro di questa sezione è superato dalla revisione del 04/10/2026
+qui sopra. Resta come traccia del ragionamento.*
 
 **Non sono più alternative.** Il disegno della pista B usa `τ_opp` per definire
 le situazioni in cui un difensore poteva uscire: la pista A diventa un pezzo

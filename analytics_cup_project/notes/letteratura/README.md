@@ -16,6 +16,12 @@ Ordinate per verdetto, non alfabeticamente.
 | [pressione-tempo-arrivo](pressione-tempo-arrivo.md) | pressione sul portatore = tempo minimo di arrivo dell'avversario più vicino | tracking + eventi, 25 fps, 306 partite | **Replicabile con riserve** — dipende dai giocatori *vicini* alla palla, dove i nostri dati sono migliori |
 | [pressing-exPressV2](pressing-exPressV2.md) | probabilità che un pressing recuperi palla, e merito individuale | tracking + eventi, 25 Hz, 36 partite | **Adattabile** — impostazione e etichette trasferibili, la GNN no: batte la regressione logistica di 0,013 di AUC |
 
+## Triage
+
+[`triage-paper.md`](triage-paper.md) (04/10/2026): tutti i paper senza scheda,
+letti ad abstract, introduzione e conclusioni, con verdetto di massima e cluster.
+Non sostituisce le schede: indica per quali vale la pena scriverne una.
+
 ## Da leggere
 
 | File | pp. | Priorità |
