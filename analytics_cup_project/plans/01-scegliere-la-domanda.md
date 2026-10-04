@@ -297,6 +297,13 @@ Candidate, da scegliere dopo il test:
 
 Il risultato del test decide quale misura di pressione entra come contesto.
 
+**Aggiornamento del 04/10/2026.** La scelta della pista si è spostata su una
+mappa wayfinder su GitHub,
+[Analytics Cup: scegliere la pista per la 2.0](https://github.com/lollokomotiv/sport_code_repo/issues/1),
+che parte dal tema *Defensive Positioning* ([`notes/challenge.md`](../notes/challenge.md))
+e non più solo dalle candidate qui sopra. Le decisioni stanno nelle schede della
+mappa; questo piano tornerà a contenere la pista scelta.
+
 ### A o B?
 
 *L'ordine di lavoro di questa sezione è superato dalla revisione del 04/10/2026
