@@ -1,11 +1,19 @@
-"""Visualizzazione del tracking SkillCorner.
+"""Visualizzazione del tracking SkillCorner, nello stile dei tutorial ufficiali.
+
+Stile (predefinito dal 13/10/2026): campo chiaro `#e8e8e6` con linee nel colore del
+testo SkillCorner, font Shentox di `skillcornerviz`, colori dalla palette
+SkillCorner. Squadre verde `#00C800` e blu `#4D5CFF`, evidenziazioni rosso scuro
+`#BF1212`: palette validata con `dataviz/scripts/validate_palette.js` sul campo
+chiaro (separazione per daltonismo ΔE ≥ 15; il verde ha poco contrasto col campo,
+e lo compensa il contorno scuro di ogni giocatore).
 
 Regola di codifica visiva, da non violare aggiungendo segnali:
 
 - **riempimento** = squadra
-- **contorno bianco** = posizione estrapolata, e nient'altro
+- **contorno** = qualità del dato, e nient'altro: **continuo** = osservato,
+  **tratteggiato** = posizione estrapolata
 - **dimensione + scia + etichetta** = giocatori evidenziati
-- la palla la indica il pallino bianco
+- la palla è il pallino bianco con il bordo scuro
 
 Il contorno è riservato alla qualità del dato. Se serve un'altra evidenziazione,
 usa dimensione o scia — non ricolorare (si perde chi gioca con chi) e non
@@ -21,20 +29,31 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from mplsoccer import Pitch
 
+from skillcornerviz.utils._fonts import load_shentox_fonts
+
 from . import data
 
-BG = "#252525"
-HOME_C, AWAY_C = "#2388c8", "#e08a1e"
-BALL_C, SCIA = "#f2f2f2", "#f5d90a"
-INK, MUTED = "#e8eaed", "#9aa0a6"
+BG = "#ffffff"                    # sfondo della figura (come i grafici di skillcornerviz)
+CAMPO = "#e8e8e6"                 # campo, dal tutorial SkillCorner Part 7
+HOME_C, AWAY_C = "#00C800", "#4D5CFF"
+BALL_C, SCIA = "#ffffff", "#BF1212"
+INK, MUTED = "#001400", "#5c615c"  # TEXT_COLOR di skillcornerviz; grigio per testo secondario
+LINEE_ALPHA = 0.5
+
+# Font SkillCorner per tutti i grafici che importano questo modulo. DejaVu Sans fa
+# da riserva per i caratteri che Shentox non ha (τ, ρ, →, ≤).
+load_shentox_fonts()
+matplotlib.rcParams["font.family"] = ["Shentox", "DejaVu Sans"]
+matplotlib.rcParams["text.color"] = INK
+matplotlib.rcParams["axes.labelcolor"] = INK
 
 _OFFSET_ETICHETTE = [2.6, -2.6, 4.6, -4.6, 6.6]
 
 _TESTI = {
     "it": {"in_corso": "   ● in corso", "osservati": "giocatori osservati",
-           "contorno": "contorno bianco = posizione estrapolata"},
+           "contorno": "contorno tratteggiato = posizione estrapolata"},
     "en": {"in_corso": "   ● in play", "osservati": "players seen by the camera",
-           "contorno": "white outline = position estimated off camera"},
+           "contorno": "dashed outline = position estimated off camera"},
 }
 
 
@@ -86,7 +105,7 @@ def anima_intervallo(
     pitch = Pitch(
         pitch_type="skillcorner",
         pitch_length=meta["pitch_length"], pitch_width=meta["pitch_width"],
-        pitch_color=BG, line_color=MUTED, linewidth=1.2,
+        pitch_color=CAMPO, line_color=INK, line_alpha=LINEE_ALPHA, linewidth=1.2,
     )
     fig, ax = pitch.draw(figsize=figsize)
     fig.set_facecolor(BG)
@@ -94,8 +113,8 @@ def anima_intervallo(
         fig.text(0.01, 0.012, fonte, color=MUTED, fontsize=8 * scala, ha="left", va="bottom")
     testi = _TESTI[lingua]
 
-    punti = ax.scatter([], [], s=170, zorder=3)
-    palla = ax.scatter([], [], s=70, c=BALL_C, edgecolors=BG, linewidths=1.2, zorder=5)
+    punti = ax.scatter([], [], s=170, edgecolors=INK, linewidths=1.4, zorder=3)
+    palla = ax.scatter([], [], s=70, c=BALL_C, edgecolors=INK, linewidths=1.2, zorder=5)
     scie = {pid: ax.plot([], [], lw=1.6, color=SCIA, alpha=0.55, zorder=2)[0]
             for pid in evidenzia}
     storia = {pid: ([], []) for pid in evidenzia}
@@ -106,19 +125,14 @@ def anima_intervallo(
 
     def disegna(i):
         fr = frames[i]
-        xs, ys, colori, bordi, spessori, dim = [], [], [], [], [], []
+        xs, ys, colori, stili, dim = [], [], [], [], []
 
         for p in fr["player_data"]:
             pid = p["player_id"]
             xs.append(p["x"])
             ys.append(p["y"])
             colori.append(HOME_C if squadra_di.get(pid) == home else AWAY_C)
-            if p["is_detected"]:
-                bordi.append("none")
-                spessori.append(0)
-            else:
-                bordi.append("#ffffff")
-                spessori.append(1.2)
+            stili.append("-" if p["is_detected"] else "--")
             dim.append(320 if pid in evidenzia else 170)
 
             if pid in storia and p["is_detected"]:
@@ -127,8 +141,7 @@ def anima_intervallo(
 
         punti.set_offsets(list(zip(xs, ys)))
         punti.set_facecolor(colori)
-        punti.set_edgecolor(bordi)
-        punti.set_linewidth(spessori)
+        punti.set_linestyle(stili)
         punti.set_sizes(dim)
 
         b = fr.get("ball_data") or {}

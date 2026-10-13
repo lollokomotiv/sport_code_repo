@@ -35,7 +35,7 @@ non lo si calcola nella shell.
 
 **2. Ciò che la telecamera non ha visto si dichiara.** È tracking broadcast: una
 parte delle posizioni è stimata fuori inquadratura (`is_detected`). Ogni
-immagine del campo mostra le posizioni stimate col contorno bianco e lo dice in
+immagine del campo mostra le posizioni stimate col contorno tratteggiato (stile in `lib/viz.py`) e lo dice in
 legenda; ogni affermazione che dipende da posizioni dice quanta parte era
 osservata, se il report lo misura. Un frame in cui il giocatore chiave è
 stimato, presentato come osservato, è l'errore che qualcuno ti farà notare in

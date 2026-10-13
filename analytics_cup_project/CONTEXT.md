@@ -12,13 +12,19 @@ _Avoid_: zona di lavoro, filone, idea
 
 ## Valutazione difensiva
 
+**Coinvolgimento**:
+Quanto un difensore era vicino a un passaggio avversario (passatore, ricevitore,
+linea di passaggio), misurato sulle posizioni del tracking. Chi era lontano ha
+coinvolgimento zero, anche se avrebbe dovuto esserci.
+_Avoid_: responsabilità (è un'altra cosa), involvement, pressione
+
 **Responsabilità**:
-Quanto una situazione d'attacco ricadeva su un certo difensore, per la sua
-posizione rispetto a portatore, ricevitore e linea di passaggio.
-_Avoid_: colpa, blame, marcatura (che è un'assegnazione, non un peso)
+Quanto un passaggio avversario spettava a un difensore: il coinvolgimento che ci
+si aspetterebbe da lui in quella situazione, anche se non c'era.
+_Avoid_: colpa, blame, coinvolgimento, marcatura (che è un'assegnazione, non un peso)
 
 **Valore concesso**:
 Quanta probabilità di segnare ha guadagnato la squadra in possesso in una
-situazione d'attacco. Ripartito per responsabilità, diventa il valore concesso da
-un difensore.
+situazione d'attacco. Ripartito per coinvolgimento o per responsabilità, diventa
+il valore concesso da un difensore.
 _Avoid_: colpa, danno, conceded threat

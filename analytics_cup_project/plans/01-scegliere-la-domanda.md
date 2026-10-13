@@ -143,7 +143,7 @@ alternative, cioè il framing di VAEP applicato alla difesa.
 
 | Chi | Cosa fa | Cosa non fa |
 |---|---|---|
-| **Hudl StatsBomb — [DefR](https://www.hudl.com/blog/defensive-responsibility-defr-statsbomb)** | per ogni azione avversaria stima quale difensore avrebbe dovuto intervenire; 4 archetipi da proattività × soppressione (Upamecano proattivo ed efficace, Rouault proattivo ma permissivo, Rüdiger passivo e permissivo, Delprato passivo ma efficace) | solo dati evento, livello stagione, nessuna valutazione della singola scelta |
+| **Hudl StatsBomb — [DefR](https://www.hudl.com/blog/defensive-responsibility-defr-statsbomb)** | per ogni azione avversaria stima quale difensore avrebbe dovuto intervenire; 4 archetipi da proattività × soppressione (Upamecano proattivo ed efficace, Rouault proattivo ma permissivo, Rüdiger passivo e permissivo, Delprato passivo ma efficace) | solo dati evento, metodo non pubblicato, nessuna valutazione della singola scelta. *Correzione dell'11/10/2026: la responsabilità è consegnata per evento (Events API v10), non solo per stagione; vedi [`notes/vendor-difesa.md`](../notes/vendor-difesa.md)* |
 | **SkillCorner** | tassonomia degli ingaggi con *Jockeying / Holding Ground* distinto dalla pressione; profili dei centrali (stepping forward, covering space in behind, recovery runs) | profili come **frequenze in z-score**: dicono quanto spesso esce, non se ha fatto bene |
 | **Opta Vision** | Pressure Intensity sui 3 difensori più vicini, corse difensive senza palla | misura la pressione, non la scelta |
 

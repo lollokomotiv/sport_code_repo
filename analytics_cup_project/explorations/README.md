@@ -14,6 +14,7 @@ caricamento dati (vedi [`../plans/02-costruire-la-submission.md`](../plans/02-co
 | [02](02-body-pose.ipynb) | Quanto del body pose è davvero utilizzabile? | **45,7%** dei giocatori in campo (non 31%: conta il denominatore). 77% vicino alla palla, 10% oltre i 40 m. Busto preciso a 6 cm, estremità a 21. |
 | [03](03-calcolo-tau-opp.ipynb) | Come si calcola τ_opp (Narizuka et al.) sui dati SkillCorner, passo per passo? | Modello, primo attraversamento, velocità per derivata centrale, un possesso spiegato. Coincide con `scripts/calcola_tau.py` e con `reports/tau_opp.csv`. §10: confronto con `time_to_impact`. |
 | [04](04-pressing-intensity-unravel.ipynb) | La Pressing Intensity di unravelsports gira sui nostri dati, e sul portatore dice la stessa cosa di τ_opp? | Gira via kloppy. Su una partita il TTI minimo sul portatore concorda poco con τ_opp (ρ = 0,65) e con `time_to_impact` (−0,67, contro −0,86 di τ_opp). Soglia di 0,7 s; nel 16% dei possessi la squadra in possesso non coincide con quella SkillCorner. |
+| [05](05-valore-concesso-verifica.ipynb) | La regola di coinvolgimento di *Blame* regge sui nostri dati come valore concesso per difensore? | Geometria sì: 97–99% dei difensori coinvolti osservati, coinvolgimento grezzo stabile fra metà delle partite (r = 0,69). Classifica per valore no (r = 0,03), per le code pesanti del valore e non per l'EPV chiuso: con Δ distanza r = 0,36. |
 
 ## Come eseguirli
 

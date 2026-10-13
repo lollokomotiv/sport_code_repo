@@ -1,7 +1,7 @@
 """Media per i post su X: formato, fonte impressa nell'immagine, limiti della piattaforma.
 
-La codifica visiva è quella di `lib/viz.py` (riempimento = squadra, contorno
-bianco = posizione estrapolata). Qui si aggiunge solo ciò che serve a un media
+La codifica visiva e lo stile sono quelli di `lib/viz.py` (riempimento = squadra,
+contorno tratteggiato = posizione estrapolata; stile SkillCorner). Qui si aggiunge solo ciò che serve a un media
 che verrà visto piccolo, su telefono, e ripubblicato da solo:
 
 - formato 16:9, testo più grande;
@@ -22,7 +22,7 @@ from matplotlib.lines import Line2D
 from mplsoccer import Pitch
 
 from . import data
-from .viz import AWAY_C, BG, HOME_C, INK, MUTED, anima_intervallo
+from .viz import AWAY_C, BG, CAMPO, HOME_C, INK, LINEE_ALPHA, MUTED, anima_intervallo
 
 FONTE = "Data: SkillCorner open data · A-League 2024/25"
 
@@ -57,8 +57,8 @@ def figura(titolo: str, sottotitolo: str = "", fonte: str = FONTE, campo_meta: d
         # mplsoccer ignora subplots_adjust: il campo va in un riquadro esplicito,
         # sotto l'intestazione e sopra la fonte.
         pitch = Pitch(pitch_type="skillcorner", pitch_length=campo_meta["pitch_length"],
-                      pitch_width=campo_meta["pitch_width"], pitch_color=BG,
-                      line_color=MUTED, linewidth=1.2)
+                      pitch_width=campo_meta["pitch_width"], pitch_color=CAMPO,
+                      line_color=INK, line_alpha=LINEE_ALPHA, linewidth=1.2)
         fig = plt.figure(figsize=FIGSIZE)
         ax = fig.add_axes([0.02, 0.07, 0.96, 0.74 if sottotitolo else 0.79])
         pitch.draw(ax=ax)
@@ -91,10 +91,13 @@ def legenda_campo(ax, meta: dict, extra: list[tuple[str, dict]] | None = None):
     informazione presenta posizioni stimate come se fossero osservate.
     """
     voci = [
-        Line2D([], [], marker="o", ls="", color=HOME_C, markersize=11, label=meta["home_team"]["short_name"]),
-        Line2D([], [], marker="o", ls="", color=AWAY_C, markersize=11, label=meta["away_team"]["short_name"]),
-        Line2D([], [], marker="o", ls="", color=BG, markeredgecolor="#ffffff", markeredgewidth=1.6,
-               markersize=11, label="position estimated (off camera)"),
+        Line2D([], [], marker="o", ls="", color=HOME_C, markeredgecolor=INK, markersize=11,
+               label=meta["home_team"]["short_name"]),
+        Line2D([], [], marker="o", ls="", color=AWAY_C, markeredgecolor=INK, markersize=11,
+               label=meta["away_team"]["short_name"]),
+        # Line2D non disegna un bordo tratteggiato: per la voce serve una collezione.
+        ax.scatter([], [], s=130, facecolors=CAMPO, edgecolors=INK, linewidths=1.6, linestyles="--",
+                   label="position estimated (off camera)"),
     ]
     for etichetta, stile in extra or []:
         voci.append(Line2D([], [], label=etichetta, **stile))
@@ -124,7 +127,7 @@ def anima(match_id: int, frame_start: int, frame_end: int, output: str | Path,
     """GIF o MP4 di un intervallo di tracking, secondo l'estensione di `output`.
 
     A 10 fps la GIF regge al massimo 35 s (350 frame): oltre, usare .mp4.
-    Il contorno bianco dell'estrapolazione e la fonte sono già nell'immagine.
+    Il contorno tratteggiato dell'estrapolazione e la fonte sono già nell'immagine.
     """
     output = Path(output)
     formato = output.suffix.lower().lstrip(".")
@@ -145,8 +148,8 @@ def anima(match_id: int, frame_start: int, frame_end: int, output: str | Path,
 
     # Nell'animazione non c'è spazio per una legenda: le squadre vanno nella riga della fonte.
     meta = data.load_match_meta(match_id)
-    fonte = (f"{fonte}   ·   blue: {meta['home_team']['short_name']}"
-             f"   ·   orange: {meta['away_team']['short_name']}")
+    fonte = (f"{fonte}   ·   green: {meta['home_team']['short_name']}"
+             f"   ·   blue: {meta['away_team']['short_name']}")
     anima_intervallo(match_id, frame_start, frame_end, output, evidenzia=evidenzia,
                      padding=padding, titolo=titolo, figsize=FIGSIZE,
                      writer=writer, dpi=DPI[formato], fonte=fonte, lingua="en", scala=1.35)
