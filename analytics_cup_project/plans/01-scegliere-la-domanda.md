@@ -182,6 +182,11 @@ dall'*Holding Ground*: è il più lento (velocità mediana 10,3 contro 14,0 di
 `pressure`), quello in cui il difensore si muove meno (2,7 m contro 5,7), il più
 breve (1,1 s), e parte già più vicino al portatore. **È una compatibilità, non
 una conferma**: la documentazione non dice cosa ci sia dentro `other`.
+*Correzione del 14/10/2026: lo dice, nella specifica dei dynamic events (p. 21–22).
+`other` è il difensore che non mette pressione diretta: resta in posizione mentre
+l'attaccante lo punta, lo accompagna restando goal-side, oppure è in un duello
+conteso dopo un cambio di possesso. Nel perimetro della verifica copre il 4% del
+gruppo "tiene", vedi [`explorations/06`](../explorations/06-esce-o-tiene-verifica.ipynb).*
 
 Resta un problema di selezione: quando il difensore non entra in contatto con il
 portatore non nasce nessun evento. Il gruppo "tiene" va quindi costruito anche
@@ -201,7 +206,7 @@ non trascina giù il resto.
 | | |
 |---|---|
 | **Dato che serve** | `on_ball_engagement` (sottotipo, `frame_start`/`frame_end`), tracking, esiti (`end_type`, `pressing_chain_end_type`) |
-| **Cosa la minaccia** | costruire il gruppo "tiene" senza selezionarlo sull'esito; il 60% delle catene di pressing ha esito vuoto (948 su 1.567), da chiarire prima di usarlo come etichetta |
+| **Cosa la minaccia** | costruire il gruppo "tiene" senza selezionarlo sull'esito; il 60% delle catene di pressing ha esito vuoto (948 su 1.567), da chiarire prima di usarlo come etichetta. *Chiarito il 14/10/2026: vuoto vuol dire che la squadra in possesso ha tenuto palla senza interruzioni (specifica, p. 87)* |
 | **Perché regge** | gli ingaggi sono ravvicinati per definizione, quindi cadono dove tracking (87%) e pose (77%) funzionano meglio |
 | **Figura** | una: esito atteso uscita vs mantenimento, o la mappa delle scelte |
 
@@ -317,14 +322,18 @@ L'ordine di lavoro che ne segue:
 
 1. ~~**`τ_opp` sui nostri dati** (replica di Narizuka)~~ — fatto il 30/09/2026,
    vedi «Dopo la replica» nella pista A
-2. **τ per difensore e sensibilità alle velocità**: quanto cambia τ_p con
+2. ~~**τ per difensore e sensibilità alle velocità**~~: quanto cambia τ_p con
    velocità azzerate o disturbate, e quanto spesso cambia *chi* arriva primo. Nel
    possesso d'esempio tre avversari arrivano entro 0,1 s l'uno dall'altro: se
    l'identità del difensore "che poteva uscire" dipende da errori di quell'ordine,
-   il gruppo di trattamento è instabile. Va misurato prima di costruirlo
-3. **Che cosa c'è dentro `other`** — se è *Holding Ground*, il gruppo "tiene" è
-   già in parte etichettato
-4. **Che cosa significa l'esito vuoto** delle catene di pressing
+   il gruppo di trattamento è instabile. Va misurato prima di costruirlo — fatto il
+   14/10/2026 in [`explorations/06`](../explorations/06-esce-o-tiene-verifica.ipynb):
+   l'insieme dei difensori sotto soglia regge anche a velocità azzerate, il
+   difensore più rapido no (cambia nel 22% delle situazioni)
+3. ~~**Che cosa c'è dentro `other`**~~ — risolto dalla specifica (p. 21–22): non è
+   il gruppo "tiene", ne è il sottoinsieme in cui il difensore contiene il portatore
+4. ~~**Che cosa significa l'esito vuoto** delle catene di pressing~~ — possesso
+   mantenuto senza interruzioni (specifica, p. 87)
 5. **Il confronto uscita / mantenimento** a parità di situazione
 6. **Robustezza**: lo stesso confronto ristretto alle situazioni interamente
    osservate. Dal 3,3% misurato sulla replica ci si aspetta una verifica breve,
