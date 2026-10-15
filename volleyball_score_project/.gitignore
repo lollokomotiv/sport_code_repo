@@ -1,0 +1,36 @@
+# I video ritraggono persone reali di una squadra amatoriale e il repo è
+# pubblico: non si versionano né i video né nulla che ne mostri i fotogrammi.
+data/raw/*
+data/labels/*
+!data/**/.gitkeep
+
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.m4v
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Output delle pipeline (ball.csv, tracce, clip): rigenerabili dai video
+output/
+
+# Pesi dei modelli: si scaricano dalle repo d'origine
+*.onnx
+*.pt
+*.pth
+models/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Ambiente / OS
+.env
+.DS_Store

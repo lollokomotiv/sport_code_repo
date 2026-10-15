@@ -12,10 +12,11 @@ Portfolio di progetti di analytics sportivo. Ogni progetto è indipendente: dati
 | [tennis_project/](tennis_project/) | Tennis — spazio di lavoro multi-analisi (TennisMyLife, Match Charting Project, quote) | Attivo |
 | [snooker_project/](snooker_project/) | Snooker — analisi esplorativa | Early stage |
 | [table_tennis_project/](table_tennis_project/) | Tennistavolo — analisi esplorativa | Early stage |
+| [volleyball_score_project/](volleyball_score_project/) | Pallavolo — esiti degli scambi e punteggio dai video di una squadra amatoriale | Setup |
 
 ## Regola principale
 
-**Prima di lavorare su un progetto, leggi il suo `CLAUDE.md`** (dove esiste: `analytics_cup_project/`, `xgoals_project/`, `totosport_project/`, `tennis_project/`).
+**Prima di lavorare su un progetto, leggi il suo `CLAUDE.md`** (dove esiste: `analytics_cup_project/`, `xgoals_project/`, `totosport_project/`, `tennis_project/`, `volleyball_score_project/`).
 
 I `CLAUDE.md` delle sottocartelle non vengono caricati all'avvio di una sessione aperta in root: vanno letti esplicitamente. Contengono le linee guida che contano — convenzioni di validazione, vincoli sui dati, stile del codice — e le regole di un progetto **non** valgono per gli altri.
 
