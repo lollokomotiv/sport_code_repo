@@ -88,5 +88,11 @@ CC BY-NC-ND 4.0 nel README): non se ne copia codice.
 
 ## Convenzioni
 
+- Venv: `.venv/` in questa cartella (Python 3.12.8, da `requirements.txt`, in
+  `.gitignore`). Test: `.venv/bin/python -m pytest`.
+- Le regole dello scambio stanno in `lib/scambio.py` (un solo scambio) e
+  `lib/partita.py` (la sequenza: punteggio, chi batte). I test passano solo dalle
+  funzioni pubbliche: `punteggio`, `esito`, `proponi_tipi`, `controlla_scambio`,
+  `battitrici`.
 - Commenti, docstring e documentazione in italiano; `README.md` in inglese.
 - I commenti spiegano perché, non cosa.

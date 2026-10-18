@@ -1,0 +1,2 @@
+# Volleyball Score. Python 3.12. Venv: volleyball_score_project/.venv (in .gitignore)
+pytest>=8.0

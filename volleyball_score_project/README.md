@@ -5,7 +5,9 @@ which team won each rally, the score of every set, and the type of each touch (s
 reception, set, attack, block, dig, free ball). Points and errors by type follow from
 the last touch of each rally.
 
-> Status: **setup.** No code yet. The approach below is a plan, not a result.
+> Status: **early development.** The rules of a rally (score, outcome, touch types,
+> rotation) are implemented and tested in `lib/`; no video is processed yet. The
+> approach below is a plan, not a result.
 
 ---
 
