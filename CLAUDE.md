@@ -12,7 +12,7 @@ Portfolio di progetti di analytics sportivo. Ogni progetto è indipendente: dati
 | [tennis_project/](tennis_project/) | Tennis — spazio di lavoro multi-analisi (TennisMyLife, Match Charting Project, quote) | Attivo |
 | [snooker_project/](snooker_project/) | Snooker — analisi esplorativa | Early stage |
 | [table_tennis_project/](table_tennis_project/) | Tennistavolo — analisi esplorativa | Early stage |
-| [volleyball_score_project/](volleyball_score_project/) | Pallavolo — esiti degli scambi e punteggio dai video di una squadra amatoriale | Setup |
+| [volleyball_score_project/](volleyball_score_project/) | Pallavolo — scambi, tipo di tocco e punteggio dai video di una squadra amatoriale | Setup |
 
 ## Regola principale
 

@@ -1,9 +1,9 @@
 # Volleyball Score
 
-Given the video of an indoor volleyball match, reconstruct the sequence of rallies and
-which team won each one. The running score of every set should come out of the video,
-not out of a manual scorer. How each rally ended (ace, kill, block, error) is the
-second step.
+Given the video of an indoor volleyball match, reconstruct every rally and every touch:
+which team won each rally, the score of every set, and the type of each touch (serve,
+reception, set, attack, block, dig, free ball). Points and errors by type follow from
+the last touch of each rally.
 
 > Status: **setup.** No code yet. The approach below is a plan, not a result.
 
@@ -11,51 +11,60 @@ second step.
 
 ## Scope of the first version
 
-- **Output:** the rallies of a match, each with its start time in the video and the
-  team that won it, and the score of every set.
+- **Output:** for every match, the rallies with the team that won each one and the score
+  of every set; every touch with its time, court side and type; points and errors by
+  type; serves attributed to players through the rotation.
+- **Not evaluated:** the quality of a touch (DataVolley's `#` `+` `!` `-` `/` `=`).
+  Judging it, and recognising players automatically, are research problems this project
+  does not take on. Player numbers on other touches can be typed in during review.
 - **Workflow:** the pipeline runs locally after the match; a review screen lets a person
-  fix the rallies the pipeline got wrong. Success means reviewing is much faster than
-  scouting the match by hand, not zero errors.
+  fix what the pipeline got wrong. Success means reviewing is much faster than scouting
+  the match by hand, not zero errors.
 - **Rules:** FIPAV, best of five sets, sets to 25, deciding set to 15, two-point margin.
-- **Not in scope:** live scoring, touch-by-touch scouting, uploads by the team.
+- **Not in scope:** touch evaluations, automatic player recognition, live scoring,
+  uploads by the team.
 
 ---
 
 ## Data
 
-Matches of an amateur team (FIPAV Serie D), one fixed camera, high behind an end line,
-filmed under a [recording protocol](docs/protocollo-ripresa.md). The videos show real
+Matches of an amateur team (FIPAV Serie D), filmed with an iPhone at 1080p and 60 fps
+from the same spot as the gym's fixed camera, high behind an end line, under a
+[recording protocol](docs/protocollo-ripresa.md). The videos show real
 people and are **not public**: they live in `data/raw/` and are never committed.
 
 | Set | Role |
 |---|---|
-| Older videos (few, low resolution, uncontrolled setup) | first test of the ball tracker, worst case |
+| Sample video (gym camera, 15 fps, 48 minutes) | first test of the ball tracker; 10 minutes labeled to try the labeling page, not used as ground truth |
 | League match 1, labeled by hand | development and threshold tuning |
 | League match 2, labeled by hand | final measurement only, not looked at during development |
 | Public matches with a similar view | demo images and extra checks, never measurements |
 
 Public images of this project are court diagrams (ball track, rally timeline) or clips
-with faces blurred: the team agreed to be filmed, opponents and referees did not.
+with faces blurred.
 
 ---
 
 ## Planned approach
 
-1. **Ground truth first.** Label every rally of the two league matches by hand: start and
-   end time, serving team, point winner. The label schema already has a field for how the
-   rally ended, filled where possible, so the same labels serve the second step.
-2. **Rally segmentation from the ball.** A pre-trained ball tracker
+1. **Ground truth first.** Label every touch of the two league matches by hand, for both
+   teams: time, court side, type, and the winner of each rally. The labels are checked
+   by the same rules the pipeline uses.
+2. **Ball tracking.** A pre-trained ball tracker
    ([fast-volleyball-tracking-inference](https://github.com/asigatchov/fast-volleyball-tracking-inference),
-   VballNet models) gives the ball trajectory and splits the video into rallies. No
-   training at this stage.
-3. **Point winner from the serve.** Under rally scoring the team that wins a rally serves
-   the next one, so the winner of rally *n* is the side that serves rally *n+1*. Spotting
-   the serving side is easier than judging where the ball lands. The last rally of a set
-   needs no extra signal: a set only ends on a point by the team that closes it.
-4. **Consistency checks.** Every reconstructed set score must be a legal score, and the
-   number of rallies must equal the points played. The set scores written down at the
-   venue are a free check on the result.
-5. **How the rally ended** comes next, on top of the same review screen.
+   VballNet models) gives the ball trajectory. Rallies and touches are found from it:
+   breaks in the flight path, and which side of the net they happen on. No training at
+   this stage.
+3. **Touch types from the rules of the game.** The first touch is the serve, the
+   receiving team's first touch is the reception, then set and attack; after an attack,
+   a touch at the net on the other side is a block, otherwise a dig. Computer vision
+   only has to find when and on which side each touch happens.
+4. **Score and server.** The team that wins a rally serves the next one. With the
+   starting lineups and substitutions from the scoresheet, the rotation tells which
+   player served. Every set score must be legal and the number of rallies must equal
+   the points played.
+5. **Review screen.** The labeling page loads the pipeline's proposals; a person fixes
+   them and types player numbers where wanted.
 
 Prior work and how each repository fits: [docs/prior-work.md](docs/prior-work.md).
 
@@ -64,7 +73,6 @@ Prior work and how each repository fits: [docs/prior-work.md](docs/prior-work.md
 ## Next steps
 
 Tracked as GitHub issues under
-[#10](https://github.com/lollokomotiv/sport_code_repo/issues/10). The main open risk:
-the sample video comes from the gym's fixed camera at **15 fps**, and the ball tracker
-has not been tested at that frame rate yet. The scoreboard is in frame but unreadable
-at that quality.
+[#10](https://github.com/lollokomotiv/sport_code_repo/issues/10). The main open risk is
+touch detection: whether the ball tracker finds when and where each touch happens,
+especially on the far half of the court and at the net.
