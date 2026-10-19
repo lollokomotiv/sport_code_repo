@@ -15,9 +15,11 @@ Decisioni prese (dettagli nel README):
   mano sugli altri tocchi;
 - **cosa no**: valutazioni DataVolley (`#` `+` `!` `-` `/` `=`) e riconoscimento
   automatico delle giocatrici. Sono ricerca, fuori portata;
-- **il tipo di tocco viene dalla grammatica dello scambio**, non da un
-  classificatore. La visione artificiale deve trovare momento e lato di ogni
-  tocco: è lì il rischio, ed è lì che si misura;
+- **il tipo di tocco lo assegna un modello di classificazione** addestrato sulle
+  etichette. La grammatica dello scambio (`proponi_tipi`) è la baseline da
+  battere sulla partita tenuta da parte, e una feature del modello: un modello
+  che non la supera non entra. Prima ancora va trovato momento e lato di ogni
+  tocco: è il primo rischio;
 - **flusso**: la pipeline gira in locale dopo la partita; una schermata di revisione
   permette di correggere. L'obiettivo è che correggere costi molto meno che fare lo
   scouting a mano, non zero errori;
@@ -94,5 +96,11 @@ CC BY-NC-ND 4.0 nel README): non se ne copia codice.
   `lib/partita.py` (la sequenza: punteggio, chi batte). I test passano solo dalle
   funzioni pubbliche: `punteggio`, `esito`, `proponi_tipi`, `controlla_scambio`,
   `battitrici`.
+- `data/external/`: dataset pubblici scaricati, fuori da git. MultiSports (licenza
+  CC BY-NC 4.0, accesso con token Hugging Face) si scarica con
+  `.venv/bin/python -m lib.multisports --femminili N`; il genere dei video sta in
+  `docs/multisports-video.csv`. Il pickle delle annotazioni si legge solo con
+  `carica_annotazioni`, che rifiuta tutto tranne gli array di numpy.
+- `notebooks/`: esplorazione, si versionano senza output.
 - Commenti, docstring e documentazione in italiano; `README.md` in inglese.
 - I commenti spiegano perché, non cosa.

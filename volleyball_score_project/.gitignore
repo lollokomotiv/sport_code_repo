@@ -2,6 +2,8 @@
 # pubblico: non si versionano né i video né nulla che ne mostri i fotogrammi.
 data/raw/*
 data/labels/*
+# Dataset pubblici scaricati (MultiSports): si riscaricano con lib/multisports.py
+data/external/*
 !data/**/.gitkeep
 
 *.mp4

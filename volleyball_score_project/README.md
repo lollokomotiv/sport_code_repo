@@ -57,10 +57,11 @@ with faces blurred.
    VballNet models) gives the ball trajectory. Rallies and touches are found from it:
    breaks in the flight path, and which side of the net they happen on. No training at
    this stage.
-3. **Touch types from the rules of the game.** The first touch is the serve, the
-   receiving team's first touch is the reception, then set and attack; after an attack,
-   a touch at the net on the other side is a block, otherwise a dig. Computer vision
-   only has to find when and on which side each touch happens.
+3. **Touch types: rules first, then a model.** The rules of the game give a baseline:
+   the first touch is the serve, the receiving team's first touch is the reception, then
+   set and attack; after an attack, a touch at the net on the other side is a block,
+   otherwise a dig. A classifier trained on the labeled touches has to beat that
+   baseline on the held-out match, with the rule as one of its features.
 4. **Score and server.** The team that wins a rally serves the next one. With the
    starting lineups and substitutions from the scoresheet, the rotation tells which
    player served. Every set score must be legal and the number of rallies must equal

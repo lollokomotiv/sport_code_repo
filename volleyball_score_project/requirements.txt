@@ -1,2 +1,13 @@
 # Volleyball Score. Python 3.12. Venv: volleyball_score_project/.venv (in .gitignore)
 pytest>=8.0
+
+# Dati e figure
+numpy>=2.0
+pandas>=2.2
+matplotlib>=3.9
+
+# Lettura dei video (clip di MultiSports, poi le partite)
+opencv-python>=4.10
+
+# Notebook di esplorazione in notebooks/
+jupyterlab>=4.0
