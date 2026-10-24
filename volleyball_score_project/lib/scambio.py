@@ -1,7 +1,8 @@
 """Lo scambio e i suoi tocchi, come escono dalle etichette o dalla pipeline.
 
 I lati sono quelli dell'inquadratura, non le squadre: "vicino" è la metà campo
-dal lato della camera. Le squadre cambiano campo a ogni set, quindi il passaggio
+dal lato della camera. Nelle riprese laterali la pagina li chiama "sinistra" e
+"destra": le regole confrontano solo se due lati sono uguali, quindi valgono uguali. Le squadre cambiano campo a ogni set, quindi il passaggio
 da lato a squadra si fa set per set, fuori da qui.
 
 Tipi di tocco con i codici DataVolley: S battuta, R ricezione, E alzata,
@@ -30,6 +31,8 @@ class Scambio:
     indice: int
     tocchi: tuple[Tocco, ...]
     lato_vincitore: str
+    # Istante in cui la palla è morta; None se non è noto (proposte della pipeline).
+    t_fine: float | None = None
 
 
 @dataclass(frozen=True)
@@ -118,6 +121,10 @@ def controlla_scambio(scambio: Scambio) -> list[Problema]:
             problemi.append(Problema(scambio.set, scambio.indice, "ricezione non preceduta da una battuta", i + 1))
         if tocco.tipo == "B" and not dall_altra_parte(precedente, tocco, "A"):
             problemi.append(Problema(scambio.set, scambio.indice, "muro non preceduto da un attacco", i + 1))
+        if i == 0 and tocco.tipo != "S":
+            problemi.append(Problema(scambio.set, scambio.indice, "lo scambio non comincia con una battuta", 1))
+        if scambio.t_fine is not None and tocco.t > scambio.t_fine:
+            problemi.append(Problema(scambio.set, scambio.indice, "tocco dopo la fine dello scambio", i + 1))
     return problemi
 
 

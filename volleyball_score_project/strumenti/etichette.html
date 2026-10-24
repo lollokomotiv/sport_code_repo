@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etichette pallavolo</title>
+<!--
+  Pagina per etichettare i tocchi di una partita, scambio per scambio (issue #14).
+  Si apre in Chrome o Safari, il video si sceglie da disco e non esce dal computer.
+  Il lavoro si salva da solo nel browser, legato al nome e alla dimensione del video.
+  "Esporta CSV" scarica le etichette: vanno spostate in data/labels/ e si leggono con
+  lib/etichette.py, che è il riferimento. Qui le regole servono solo ai suggerimenti.
+-->
+<style>
+  :root { --sfondo: #f5f5f2; --testo: #1d1d1b; --bordo: #d6d5cf; --tenue: #6b6a64;
+          --vicino: #2f6fb3; --lontano: #b5532f; --avviso: #b3261e; --ok: #2e7d32; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 -apple-system, system-ui, sans-serif; background: var(--sfondo); color: var(--testo); }
+  header { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--bordo); flex-wrap: wrap; }
+  header label { color: var(--tenue); }
+  input[type=text], input[type=number] { padding: 3px 6px; border: 1px solid var(--bordo); border-radius: 4px; }
+  button { padding: 4px 10px; border: 1px solid var(--bordo); border-radius: 4px; background: white; cursor: pointer; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; height: calc(100vh - 50px); }
+  #colonna-video { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  video { width: 100%; max-height: calc(100vh - 200px); background: black; border-radius: 4px; }
+  #barra { display: flex; gap: 16px; color: var(--tenue); flex-wrap: wrap; }
+  #pannello { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .scheda { background: white; border: 1px solid var(--bordo); border-radius: 6px; padding: 10px; }
+  #punteggio { font-size: 22px; font-weight: 600; }
+  #aperto .tocco { display: inline-block; margin: 2px 4px 2px 0; padding: 1px 6px; border-radius: 3px; color: white; }
+  .vicino { background: var(--vicino); } .lontano { background: var(--lontano); }
+  #avvisi { color: var(--avviso); }
+  #elenco { overflow-y: auto; flex: 1; min-height: 0; }
+  .scambio { border-top: 1px solid var(--bordo); padding: 6px 0; }
+  .scambio .testa { display: flex; justify-content: space-between; cursor: pointer; }
+  .scambio .problema { color: var(--avviso); font-size: 12px; }
+  .scambio select, .scambio input { font-size: 12px; padding: 0 2px; }
+  .scambio input { width: 38px; }
+  .tenue { color: var(--tenue); }
+  kbd { border: 1px solid var(--bordo); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; background: white; font-size: 12px; }
+  #tasti-stato { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  #tasti-stato.attivi { background: #e3f1e4; color: var(--ok); }
+  #tasti-stato.fermi { background: #fbe4e2; color: var(--avviso); }
+  #eco { font-weight: 600; color: var(--testo); }
+  #legenda { font-size: 12px; border-collapse: collapse; width: 100%; }
+  #legenda td { padding: 2px 6px; border-top: 1px solid var(--bordo); vertical-align: top; }
+  #legenda td:first-child:not([colspan]) { white-space: nowrap; }
+  #legenda { table-layout: auto; overflow-wrap: anywhere; }
+  #guida summary { cursor: pointer; margin-bottom: 4px; }
+  #note { font-size: 12px; }
+  #note p { margin: 0 0 4px; }
+  .nota-colore { color: white; padding: 0 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <button id="scegli">Scegli video…</button>
+  <input type="file" id="file-video" accept="video/*" hidden>
+  <label>Partita <input type="text" id="partita" size="22"></label>
+  <label>Inquadratura <select id="vista"><option value="fondo">dietro il fondo</option><option value="laterale">laterale</option></select></label>
+  <label>fps <input type="number" id="fps" value="30" min="1" max="240" style="width:56px"></label>
+  <button id="esporta">Esporta CSV</button>
+  <button id="importa">Importa CSV…</button>
+  <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
+  <label><input type="checkbox" id="pausa"> pausa a ogni tocco</label>
+  <span id="tasti-stato"></span>
+  <span id="stato" class="tenue"></span>
+</header>
+<main>
+  <div id="colonna-video">
+    <video id="video" controls playsinline></video>
+    <div id="barra"><span id="tempo">0.00 s</span><span id="velocita">velocità 1×</span><span id="ultimo"></span><span id="eco"></span></div>
+    <div id="note">
+      <p><b>Il colore è la metà campo, non la squadra.</b> <span class="vicino nota-colore">blu</span> = vicino alla camera (o sinistra con l'inquadratura laterale), <span class="lontano nota-colore">arancio</span> = lontano (o destra). Dopo ogni numero guarda il colore: se è giusto vai avanti.</p>
+      <p><b>Come la pagina ricava il lato:</b> dopo battuta, attacco o free ball la palla passa di là; ricezione e muro stanno sempre dall'altra parte; alzata e difesa restano dalla stessa parte. Dopo un muro assume che difenda chi ha murato: se invece la palla torna a chi ha attaccato (copertura), dopo il <kbd>6</kbd> premi <kbd>L</kbd>. La battuta la fa chi ha vinto lo scambio prima; solo per la prima del set la pagina chiede chi batte.</p>
+      <p class="tenue">Tipi provvisori fino alla guida all'etichettatura. Un tocco sbagliato: <kbd>⌫</kbd> e lo rifai, oppure lo correggi o lo cancelli (×) nell'elenco a destra.</p>
+    </div>
+  </div>
+  <div id="pannello">
+    <div class="scheda">
+      <div class="tenue" id="set-info">Nessun set: premi <kbd>N</kbd> o il primo tocco.</div>
+      <div id="punteggio">–</div>
+      <div class="tenue" id="per-lato"></div>
+    </div>
+    <div class="scheda" id="aperto"><span class="tenue">Nessuno scambio aperto.</span></div>
+    <details class="scheda" id="guida" open>
+      <summary><b>Tasti e tipi di tocco</b></summary>
+      <table id="legenda">
+        <tr><td colspan="2"><b><kbd>1</kbd>–<kbd>7</kbd> aggiungono un tocco di quel tipo</b>, nell'istante in cui premi: uno per ogni tocco, di tutte e due le squadre. Il lato lo ricava la pagina dalla sequenza (blu vicino, arancio lontano)</td></tr>
+        <tr><td><kbd>L</kbd></td><td>inverte il lato dell'<b>ultimo</b> tocco. Si preme <b>dopo</b> il tocco, solo se il suo colore è sbagliato, prima del tocco successivo</td></tr>
+        <tr><td><kbd>Z</kbd> <kbd>X</kbd></td><td><b>fine scambio</b>: vince la metà blu / arancio; premi quando la palla è morta</td></tr>
+        <tr><td><kbd>1</kbd> S</td><td><b>Battuta</b>: primo tocco dello scambio, da dietro la linea di fondo</td></tr>
+        <tr><td><kbd>2</kbd> R</td><td><b>Ricezione</b>: primo tocco di chi riceve la battuta</td></tr>
+        <tr><td><kbd>3</kbd> E</td><td><b>Alzata</b>: prepara l'attacco, di solito il 2° tocco</td></tr>
+        <tr><td><kbd>4</kbd> A</td><td><b>Attacco</b>: manda la palla di là per fare punto (anche pallonetto, attacco di seconda)</td></tr>
+        <tr><td><kbd>5</kbd> B</td><td><b>Muro</b>: a rete subito dopo un attacco avversario; un muro a più giocatrici è un tocco solo</td></tr>
+        <tr><td><kbd>6</kbd> D</td><td><b>Difesa</b>: primo tocco dopo un attacco o un muro (dopo la battuta è ricezione)</td></tr>
+        <tr><td><kbd>7</kbd> F</td><td><b>Free ball</b>: palla rimandata di là facile, senza attaccare</td></tr>
+        <tr><td><kbd>A</kbd> <kbd>S</kbd></td><td>in alternativa: tocco nella metà blu / arancio col tipo proposto dalla pagina (con <b>?</b>)</td></tr>
+        <tr><td><kbd>M</kbd></td><td>numero di maglia dell'ultimo tocco (solo la nostra squadra, facoltativo)</td></tr>
+        <tr><td><kbd>⌫</kbd></td><td><b>cancella l'ultimo tocco</b> (se lo scambio era chiuso, lo riapre); <b>×</b> nell'elenco cancella un tocco qualsiasi</td></tr>
+        <tr><td><kbd>N</kbd> <kbd>U</kbd></td><td>nuovo set · annulla l'ultima azione, qualunque sia</td></tr>
+        <tr><td><kbd>Spazio</kbd></td><td>play/pausa · <kbd>←</kbd><kbd>→</kbd> ±2 s · <kbd>,</kbd><kbd>.</kbd> un fotogramma · <kbd>[</kbd><kbd>]</kbd> velocità</td></tr>
+      </table>
+    </details>
+    <div class="scheda" id="avvisi"></div>
+    <div class="scheda" id="elenco"></div>
+  </div>
+</main>
+<script>
+"use strict";
+
+// --- Regole: copia di lib/scambio.py, solo per i suggerimenti -----------------------
+const VICINO = "vicino", LONTANO = "lontano";
+const TIPI = ["S", "R", "E", "A", "B", "D", "F"];
+const SOGLIA_MURO = 0.3;           // come in lib/scambio.py: provvisoria
+const PER_POSIZIONE = {1: "D", 2: "E", 3: "A"};
+
+// Tipo effettivo di ogni tocco: quello scelto a mano, altrimenti la proposta della
+// grammatica, calcolata sui tipi effettivi dei tocchi precedenti.
+function tipiEffettivi(tocchi) {
+  const tipi = [];
+  let posizione = 0;
+  tocchi.forEach((t, i) => {
+    let proposta;
+    if (i === 0) { proposta = "S"; }
+    else if (t.lato !== tocchi[i - 1].lato) {
+      if (tipi[i - 1] === "E" && !tocchi[i - 1].manuale) tipi[i - 1] = "A";  // attacco di seconda
+      if (tipi[i - 1] === "A" && t.t - tocchi[i - 1].t < SOGLIA_MURO) { posizione = 0; proposta = "B"; }
+      else { posizione = 1; proposta = tipi[i - 1] === "S" ? "R" : "D"; }
+    } else {
+      posizione += 1;
+      proposta = PER_POSIZIONE[posizione] || "A";
+    }
+    const tipo = t.manuale ? t.tipo : proposta;
+    if (tipo === "B") posizione = 0;
+    tipi.push(tipo);
+  });
+  return tipi;
+}
+
+function problemiScambio(tocchi) {
+  const tipi = tipiEffettivi(tocchi), problemi = [];
+  let possesso = 0;
+  tocchi.forEach((t, i) => {
+    const prec = i > 0 ? tocchi[i - 1] : null, tipoPrec = i > 0 ? tipi[i - 1] : null;
+    if (tipi[i] === "B") possesso = 0;
+    else if (prec && prec.lato === t.lato) possesso += 1;
+    else possesso = 1;
+    const dallAltra = tipo => prec && tipoPrec === tipo && prec.lato !== t.lato;
+    if (possesso > 3) problemi.push(`tocco ${i + 1}: più di tre tocchi dalla stessa parte`);
+    if (tipi[i] === "R" && !dallAltra("S")) problemi.push(`tocco ${i + 1}: ricezione non dopo una battuta`);
+    if (tipi[i] === "B" && !dallAltra("A")) problemi.push(`tocco ${i + 1}: muro non dopo un attacco`);
+    if (i > 0 && tipi[i] === "S") problemi.push(`tocco ${i + 1}: battuta non all'inizio`);
+  });
+  return problemi;
+}
+
+function setChiuso(numero, a, b) {
+  const obiettivo = numero === 5 ? 15 : 25;
+  return Math.max(a, b) >= obiettivo && Math.abs(a - b) >= 2;
+}
+
+// --- Stato --------------------------------------------------------------------------
+// scambi: {set, indice, tocchi: [{t, lato, tipo, manuale, numero}], lato_vincitore, t_fine}
+// L'ultimo scambio è aperto finché lato_vincitore è null.
+let stato = { partita: "", setCorrente: 0, latoNostro: {}, scambi: [] };
+let storia = [];
+let chiave = null;  // chiave di salvataggio, dal nome e dalla dimensione del video
+
+const $ = id => document.getElementById(id);
+
+// Dentro la pagina i lati sono sempre VICINO (blu) e LONTANO (arancio). Nelle riprese
+// laterali si chiamano sinistra e destra: cambiano i nomi, a video e nel CSV.
+const NOMI_LATI = { fondo: { vicino: "vicino", lontano: "lontano" }, laterale: { vicino: "sinistra", lontano: "destra" } };
+const nomeLato = l => NOMI_LATI[stato.vista || "fondo"][l] || l;
+const latoDaNome = n => ({ vicino: VICINO, sinistra: VICINO, lontano: LONTANO, destra: LONTANO })[n] || n;
+function chiediMeta(domanda) {
+  const lat = stato.vista === "laterale";
+  const r = (prompt(`${domanda} ${lat ? "sinistra (S) o destra (D)" : "vicina (V) o lontana (L)"}?`) || "").trim().toUpperCase();
+  liberaTasti();
+  if (r === (lat ? "S" : "V")) return VICINO;
+  if (r === (lat ? "D" : "L")) return LONTANO;
+  return null;
+}
+const video = $("video");
+
+function salva() {
+  if (!chiave) return;
+  try { localStorage.setItem(chiave, JSON.stringify(stato)); $("stato").textContent = "salvato"; }
+  catch (e) { $("stato").textContent = "salvataggio non riuscito: esporta il CSV"; }
+}
+
+function modifica(azione) {
+  storia.push(JSON.stringify(stato));
+  if (storia.length > 300) storia.shift();
+  azione();
+  salva();
+  disegna();
+}
+
+function annulla() {
+  if (!storia.length) return;
+  stato = JSON.parse(storia.pop());
+  salva();
+  disegna();
+}
+
+const scambiDelSet = n => stato.scambi.filter(s => s.set === n);
+const aperto = () => {
+  const ultimo = stato.scambi[stato.scambi.length - 1];
+  return ultimo && ultimo.lato_vincitore === null ? ultimo : null;
+};
+
+function liberaTasti() {
+  const a = document.activeElement;
+  if (a && a !== document.body && a.blur) a.blur();
+  aggiornaTasti();
+}
+
+function chiediLato(numero) {
+  return chiediMeta(`Set ${numero}: la nostra squadra gioca nella metà`);
+}
+
+function nuovoSet() {
+  if (aperto()) { alert("Chiudi prima lo scambio aperto (Z o X)."); return false; }
+  const numero = stato.setCorrente + 1;
+  const lato = chiediLato(numero);
+  liberaTasti();
+  if (!lato) return false;
+  modifica(() => { stato.setCorrente = numero; stato.latoNostro[numero] = lato; });
+  return true;
+}
+
+function tocco(lato, tipo = null) {
+  if (!stato.setCorrente && !nuovoSet()) return;
+  const t = Math.round(video.currentTime * 1000) / 1000;
+  modifica(() => {
+    let s = aperto();
+    if (!s) {
+      s = { set: stato.setCorrente, indice: scambiDelSet(stato.setCorrente).length + 1,
+            tocchi: [], lato_vincitore: null, t_fine: null };
+      stato.scambi.push(s);
+    }
+    s.tocchi.push({ t, lato, tipo, manuale: tipo !== null, numero: null });
+    if ($("pausa").checked) video.pause();
+    s.tocchi.sort((a, b) => a.t - b.t);
+  });
+}
+
+// Lato di un tocco nuovo di tipo noto, dalla sequenza: dopo battuta, attacco o free ball
+// la palla passa di là; ricezione e muro stanno dall'altra parte; il resto resta dalla
+// stessa parte. Dopo un muro si assume la difesa di chi ha murato (L la inverte).
+function latoDedotto(s, tipo) {
+  const altro = l => (l === VICINO ? LONTANO : VICINO);
+  if (!s || !s.tocchi.length) {
+    const prec = scambiDelSet(stato.setCorrente).filter(x => x.lato_vincitore).pop();
+    return prec ? prec.lato_vincitore : null;     // batte chi ha vinto lo scambio prima
+  }
+  const ultimo = s.tocchi[s.tocchi.length - 1];
+  const tipoUltimo = tipiEffettivi(s.tocchi).pop();
+  if (["S", "A", "F"].includes(tipoUltimo)) return altro(ultimo.lato);
+  if (tipo === "R" || tipo === "B") return altro(ultimo.lato);
+  return ultimo.lato;
+}
+
+function toccoDiTipo(tipo) {
+  if (!stato.setCorrente && !nuovoSet()) return null;
+  let lato = latoDedotto(aperto(), tipo);
+  if (!lato) {
+    lato = chiediMeta("Prima battuta del set: batte la metà");
+    if (!lato) return null;
+  }
+  tocco(lato, tipo);
+  return lato;
+}
+
+// Cancella l'ultimo tocco segnato. Se lo scambio resta vuoto sparisce anche lui; se era
+// già chiuso, torna aperto, perché togliere un tocco vuol dire che lo si sta rifacendo.
+function cancellaUltimoTocco() {
+  for (let i = stato.scambi.length - 1; i >= 0; i--) {
+    const sc = stato.scambi[i];
+    if (!sc.tocchi.length) continue;
+    modifica(() => {
+      sc.tocchi.pop();
+      if (!sc.tocchi.length) { stato.scambi.splice(i, 1); rinumera(); }
+      else if (i === stato.scambi.length - 1) { sc.lato_vincitore = null; sc.t_fine = null; }
+    });
+    return true;
+  }
+  return false;
+}
+
+function invertiLato() {
+  const t = ultimoTocco();
+  if (t) modifica(() => { t.lato = t.lato === VICINO ? LONTANO : VICINO; });
+  return t ? t.lato : null;
+}
+
+function fineScambio(lato) {
+  const s = aperto();
+  if (!s) return;
+  if ($("pausa").checked) video.pause();
+  modifica(() => { s.lato_vincitore = lato; s.t_fine = Math.round(video.currentTime * 1000) / 1000; });
+}
+
+function ultimoTocco() {
+  for (let i = stato.scambi.length - 1; i >= 0; i--) {
+    const tocchi = stato.scambi[i].tocchi;
+    if (tocchi.length) return tocchi[tocchi.length - 1];
+  }
+  return null;
+}
+
+
+function numeroUltimo() {
+  const t = ultimoTocco();
+  if (!t) return;
+  const r = prompt("Numero di maglia (vuoto per toglierlo):", t.numero ?? "");
+  liberaTasti();
+  if (r === null) return;
+  const n = r.trim() === "" ? null : parseInt(r, 10);
+  if (n !== null && Number.isNaN(n)) return;
+  modifica(() => { t.numero = n; });
+}
+
+// --- Disegno ------------------------------------------------------------------------
+function punteggioSet(n) {
+  let nostri = 0, loro = 0, vicino = 0, lontano = 0;
+  for (const s of scambiDelSet(n)) {
+    if (!s.lato_vincitore) continue;
+    if (s.lato_vincitore === stato.latoNostro[n]) nostri++; else loro++;
+    if (s.lato_vincitore === VICINO) vicino++; else lontano++;
+  }
+  return { nostri, loro, vicino, lontano };
+}
+
+function problemiTutti() {
+  const problemi = new Map();
+  stato.scambi.forEach((s, i) => {
+    const lista = problemiScambio(s.tocchi);
+    const prec = stato.scambi[i - 1];
+    if (prec && prec.set === s.set && prec.lato_vincitore && s.tocchi.length && s.tocchi[0].lato !== prec.lato_vincitore)
+      lista.unshift("batte chi non ha vinto lo scambio precedente");
+    if (s.tocchi.length && tipiEffettivi(s.tocchi)[0] !== "S") lista.unshift("lo scambio non comincia con una battuta");
+    if (s.t_fine !== null && s.tocchi.some(t => t.t > s.t_fine)) lista.push("c'è un tocco dopo la fine dello scambio");
+    if (lista.length) problemi.set(s, lista);
+  });
+  return problemi;
+}
+
+function disegna() {
+  const n = stato.setCorrente;
+  if (n) {
+    const p = punteggioSet(n);
+    $("set-info").textContent = `Set ${n} · la nostra squadra è ${nomeLato(stato.latoNostro[n])}`;
+    $("punteggio").textContent = `Noi ${p.nostri} – ${p.loro} Loro`;
+    $("per-lato").textContent = `${nomeLato(VICINO)} ${p.vicino} – ${p.lontano} ${nomeLato(LONTANO)}` +
+      (setChiuso(n, p.nostri, p.loro) ? " · set finito: N per il successivo" : "");
+  }
+
+  const s = aperto();
+  if (s) {
+    const tipi = tipiEffettivi(s.tocchi);
+    $("aperto").innerHTML = `<div class="tenue">Scambio ${s.indice} aperto</div>` +
+      s.tocchi.map((t, i) => `<span class="tocco ${t.lato}">${tipi[i]}${t.manuale ? "" : "?"}${t.numero ? " #" + t.numero : ""}</span>`).join("");
+  } else {
+    $("aperto").innerHTML = '<span class="tenue">Nessuno scambio aperto.</span>';
+  }
+
+  const problemi = problemiTutti();
+  $("avvisi").innerHTML = problemi.size
+    ? `${problemi.size} scambi con avvisi (in rosso nell'elenco)` : '<span style="color:var(--ok)">Nessun avviso</span>';
+
+  const t = ultimoTocco();
+  $("ultimo").textContent = t ? `ultimo tocco: ${t.t.toFixed(2)} s, ${nomeLato(t.lato)}` : "";
+
+  const elenco = $("elenco");
+  elenco.innerHTML = "";
+  [...stato.scambi].reverse().forEach(sc => {
+    const tipi = tipiEffettivi(sc.tocchi);
+    const div = document.createElement("div");
+    div.className = "scambio";
+    const vince = sc.lato_vincitore ? `vince ${nomeLato(sc.lato_vincitore)}` : "aperto";
+    div.innerHTML = `<div class="testa"><b>Set ${sc.set} · scambio ${sc.indice}</b><span class="tenue">${vince}</span></div>`;
+    div.querySelector(".testa").onclick = () => {
+      if (sc.tocchi.length) video.currentTime = Math.max(0, sc.tocchi[0].t - 1);
+    };
+    const riga = document.createElement("div");
+    sc.tocchi.forEach((tc, i) => {
+      const span = document.createElement("span");
+      span.style.marginRight = "6px";
+      const sel = document.createElement("select");
+      sel.className = tc.lato;
+      sel.style.color = "white";
+      TIPI.forEach(x => sel.add(new Option(x, x, false, x === tipi[i])));
+      sel.title = `${tc.t.toFixed(2)} s, ${nomeLato(tc.lato)}${tc.manuale ? "" : " (proposta)"}`;
+      sel.onchange = () => modifica(() => { tc.tipo = sel.value; tc.manuale = true; });
+      const num = document.createElement("input");
+      num.placeholder = "#";
+      num.value = tc.numero ?? "";
+      num.onchange = () => modifica(() => { tc.numero = num.value.trim() ? parseInt(num.value, 10) : null; });
+      const x = document.createElement("button");
+      x.textContent = "×";
+      x.title = "cancella questo tocco";
+      x.style.cssText = "font-size:11px;padding:0 4px;margin-left:1px";
+      x.onclick = () => modifica(() => {
+        sc.tocchi.splice(i, 1);
+        if (!sc.tocchi.length) { stato.scambi = stato.scambi.filter(y => y !== sc); rinumera(); }
+      });
+      span.append(sel, num, x);
+      riga.append(span);
+    });
+    const via = document.createElement("button");
+    via.textContent = "elimina";
+    via.style.fontSize = "11px";
+    via.onclick = () => { if (confirm(`Eliminare lo scambio ${sc.indice} del set ${sc.set}?`))
+      modifica(() => { stato.scambi = stato.scambi.filter(x => x !== sc); rinumera(); }); };
+    riga.append(via);
+    div.append(riga);
+    for (const p of problemi.get(sc) || []) {
+      const d = document.createElement("div"); d.className = "problema"; d.textContent = p; div.append(d);
+    }
+    elenco.append(div);
+  });
+}
+
+function rinumera() {
+  const contatori = {};
+  for (const s of stato.scambi) { contatori[s.set] = (contatori[s.set] || 0) + 1; s.indice = contatori[s.set]; }
+}
+
+// --- CSV ----------------------------------------------------------------------------
+const COLONNE = ["partita", "set", "scambio", "tocco", "t", "lato", "tipo", "numero", "lato_vincitore", "t_fine", "lato_nostro"];
+
+function esporta() {
+  if (aperto()) { alert("C'è uno scambio aperto: chiudilo (Z o X) prima di esportare."); return; }
+  const partita = ($("partita").value || "partita").trim();
+  const righe = [COLONNE.join(",")];
+  for (const s of stato.scambi) {
+    const tipi = tipiEffettivi(s.tocchi);
+    s.tocchi.forEach((t, i) => righe.push([partita, s.set, s.indice, i + 1, t.t.toFixed(3), nomeLato(t.lato), tipi[i],
+      t.numero ?? "", nomeLato(s.lato_vincitore), s.t_fine.toFixed(3), nomeLato(stato.latoNostro[s.set])].join(",")));
+  }
+  const blob = new Blob([righe.join("\n") + "\n"], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${partita}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importa(testo) {
+  const [intestazione, ...righe] = testo.trim().split(/\r?\n/);
+  const col = intestazione.split(",");
+  const per = new Map();
+  const latoNostro = {};
+  let vistaImportata = "fondo";
+  for (const r of righe) {
+    const v = Object.fromEntries(r.split(",").map((x, i) => [col[i], x]));
+    const k = `${v.set}|${v.scambio}`;
+    if (!per.has(k)) per.set(k, { set: +v.set, indice: +v.scambio, tocchi: [], lato_vincitore: latoDaNome(v.lato_vincitore), t_fine: +v.t_fine });
+    per.get(k).tocchi.push({ t: +v.t, lato: latoDaNome(v.lato), tipo: v.tipo, manuale: true, numero: v.numero ? +v.numero : null });
+    latoNostro[+v.set] = latoDaNome(v.lato_nostro);
+    if (["sinistra", "destra"].includes(v.lato)) vistaImportata = "laterale";
+    if (v.partita) $("partita").value = v.partita;
+  }
+  const scambi = [...per.values()].sort((a, b) => a.set - b.set || a.indice - b.indice);
+  scambi.forEach(s => s.tocchi.sort((a, b) => a.t - b.t));
+  modifica(() => {
+    stato.scambi = scambi;
+    stato.latoNostro = latoNostro;
+    stato.setCorrente = Math.max(0, ...scambi.map(s => s.set));
+    stato.vista = vistaImportata;
+  });
+  $("vista").value = vistaImportata;
+}
+
+// --- Eventi -------------------------------------------------------------------------
+$("scegli").onclick = () => $("file-video").click();
+$("file-video").onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  video.src = URL.createObjectURL(f);
+  chiave = `etichette|${f.name}|${f.size}`;
+  storia = [];
+  let salvato = null;
+  try { salvato = localStorage.getItem(chiave); } catch (err) { $("stato").textContent = "salvataggio nel browser non disponibile: esporta spesso il CSV"; }
+  if (salvato && confirm("C'è un lavoro salvato per questo video. Riprenderlo?")) stato = JSON.parse(salvato);
+  else stato = { partita: f.name.replace(/\.[^.]+$/, ""), setCorrente: 0, latoNostro: {}, scambi: [] };
+  $("partita").value = stato.partita;
+  $("vista").value = stato.vista || "fondo";
+  disegna();
+};
+$("vista").onchange = () => { modifica(() => { stato.vista = $("vista").value; }); };
+$("partita").onchange = () => { stato.partita = $("partita").value; salva(); };
+$("esporta").onclick = esporta;
+$("importa").onclick = () => $("file-csv").click();
+$("file-csv").onchange = e => {
+  const f = e.target.files[0];
+  if (f) f.text().then(testo => { if (!stato.scambi.length || confirm("Sostituire le etichette attuali?")) importa(testo); });
+  e.target.value = "";
+};
+
+const VELOCITA = [0.25, 0.5, 1, 1.5, 2];
+function cambiaVelocita(passo) {
+  const i = Math.min(VELOCITA.length - 1, Math.max(0, VELOCITA.indexOf(video.playbackRate) + passo));
+  video.playbackRate = VELOCITA[i] ?? 1;
+  $("velocita").textContent = `velocità ${video.playbackRate}×`;
+}
+
+video.ontimeupdate = () => { $("tempo").textContent = `${video.currentTime.toFixed(2)} s`; };
+
+// Dopo un clic sui controlli del video (play, barra di avanzamento) Chrome tiene il
+// fuoco dentro i controlli e non passa più i tasti alla pagina. Il fuoco si toglie
+// appena arriva: il clic ha già fatto il suo effetto, e Spazio e frecce li gestisce la pagina.
+const togliFuocoVideo = () => setTimeout(() => { if (document.activeElement === video) video.blur(); }, 0);
+for (const evento of ["focus", "mouseup", "seeked", "play", "pause"]) video.addEventListener(evento, togliFuocoVideo);
+
+// I tasti non funzionano mentre il cursore è in un campo: lo si dice, e Esc lo libera.
+function inUnCampo(el) {
+  return el && (el.tagName === "SELECT" || el.tagName === "TEXTAREA" ||
+    (el.tagName === "INPUT" && !["checkbox", "file", "button"].includes(el.type)));
+}
+function aggiornaTasti() {
+  const fermi = inUnCampo(document.activeElement);
+  const el = $("tasti-stato");
+  el.className = fermi ? "fermi" : "attivi";
+  el.textContent = fermi ? "tasti fermi: stai scrivendo in un campo (Esc)" : "tasti attivi";
+}
+document.addEventListener("focusin", aggiornaTasti);
+document.addEventListener("focusout", () => setTimeout(aggiornaTasti, 0));
+for (const id of ["partita", "fps"]) $(id).addEventListener("keydown", e => { if (e.key === "Enter") e.target.blur(); });
+
+const NOMI = { S: "battuta", R: "ricezione", E: "alzata", A: "attacco", B: "muro", D: "difesa", F: "free ball" };
+const ECO = { a: "tocco blu", s: "tocco arancio", z: "vince la metà blu", x: "vince la metà arancio", n: "nuovo set", u: "annullato", m: "numero" };
+function eco(testo) { $("eco").textContent = `· ${testo}`; clearTimeout(eco.t); eco.t = setTimeout(() => { $("eco").textContent = ""; }, testo.includes("manca") ? 4000 : 1500); }
+
+// In ascolto sulla finestra e in fase di cattura: arriva prima dei controlli del video,
+// che in Chrome trattengono i tasti quando hanno il fuoco.
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") { liberaTasti(); return; }
+  if (inUnCampo(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Dopo un clic su una casella o un bottone il fuoco resta lì: Spazio lo attiverebbe.
+  if (e.target !== document.body && e.target !== video && e.target.blur) e.target.blur();
+  if (!video.src) return;
+  const k = e.key.toLowerCase();
+  const fotogramma = 1 / (parseFloat($("fps").value) || 30);
+  const azioni = {
+    a: () => tocco(VICINO), s: () => tocco(LONTANO),
+    z: () => fineScambio(VICINO), x: () => fineScambio(LONTANO),
+    m: numeroUltimo, n: nuovoSet, u: annulla,
+    " ": () => (video.paused ? video.play() : video.pause()),
+    arrowleft: () => { video.currentTime = Math.max(0, video.currentTime - 2); },
+    arrowright: () => { video.currentTime += 2; },
+    ",": () => { video.pause(); video.currentTime = Math.max(0, video.currentTime - fotogramma); },
+    ".": () => { video.pause(); video.currentTime += fotogramma; },
+    "[": () => cambiaVelocita(-1), "]": () => cambiaVelocita(1),
+  };
+  try {
+    if (k >= "1" && k <= "7") { e.preventDefault(); e.stopPropagation(); const lato = toccoDiTipo(TIPI[+k - 1]);
+      if (lato) eco(`${NOMI[TIPI[+k - 1]]}, ${nomeLato(lato)}`); return; }
+    if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); e.stopPropagation(); if (cancellaUltimoTocco()) eco("ultimo tocco cancellato"); return; }
+    if (k === "l") { e.preventDefault(); e.stopPropagation(); const l = invertiLato(); if (l) eco(`ultimo tocco spostato: ${nomeLato(l)}`); return; }
+    if (azioni[k]) { e.preventDefault(); e.stopPropagation(); azioni[k](); if (ECO[k]) eco(ECO[k]); }
+  } catch (err) {
+    console.error(err);
+    eco(`errore: ${err.message}`);
+  }
+}, true);
+
+// La legenda si chiude cliccando sul titolo; la pagina ricorda la scelta.
+try { if (localStorage.getItem("etichette|guida") === "chiusa") $("guida").open = false; } catch (e) {}
+$("guida").addEventListener("toggle", () => {
+  try { localStorage.setItem("etichette|guida", $("guida").open ? "aperta" : "chiusa"); } catch (e) {}
+});
+
+disegna();
+aggiornaTasti();
+</script>
+</body>
+</html>

@@ -39,7 +39,9 @@ o palestre.
 Il repo è pubblico. I video ritraggono persone reali:
 
 - non si versionano i video, né frame, ritagli, GIF o figure che mostrano i
-  giocatori. Stanno in `data/raw/`, ignorata da git;
+  giocatori. Stanno in `data/raw/`, ignorata da git, una cartella per partita:
+  `data/raw/<data>_<fonte>/` (es. `2026-10-23_iphone-laterale/`), con i nomi
+  originali dei file;
 - le etichette fatte a mano stanno in `data/labels/`, anche quella ignorata finché
   non si decide cosa contengono (nomi, numeri di maglia);
 - le immagini pubbliche sono schemi del campo (traccia della palla, linea del
@@ -56,6 +58,8 @@ Il repo è pubblico. I video ritraggono persone reali:
 - Divisione dei dati:
   - video di esempio (camera della palestra, 15 fps): prima prova del tracker e
     collaudo della pagina di etichettatura, mai come riferimento;
+  - clip laterali dell'iPhone (2026-10-23, 14 scambi, 30 fps, a mano): collaudo
+    della pagina e, più avanti, prova del classificatore su un'altra angolazione;
   - partita 1 del campionato: sviluppo e regolazione delle soglie;
   - partita 2: solo misura finale. Non la si apre durante lo sviluppo;
   - partite pubbliche: immagini e prove, mai misure.
@@ -102,5 +106,10 @@ CC BY-NC-ND 4.0 nel README): non se ne copia codice.
   `docs/multisports-video.csv`. Il pickle delle annotazioni si legge solo con
   `carica_annotazioni`, che rifiuta tutto tranne gli array di numpy.
 - `notebooks/`: esplorazione, si versionano senza output.
+- `strumenti/etichette.html`: la pagina di etichettatura, un solo file da aprire in
+  Chrome o Safari. Le sue regole sono una copia di `lib/scambio.py` per i suggerimenti: se
+  cambiano in Python vanno cambiate anche lì. Il CSV esportato si legge con
+  `lib/etichette.py` e si controlla con `.venv/bin/python -m lib.etichette <file>`.
+- `prototipi/`: codice usa e getta delle prove, fuori da `main` (ramo `prototipo/...`).
 - Commenti, docstring e documentazione in italiano; `README.md` in inglese.
 - I commenti spiegano perché, non cosa.

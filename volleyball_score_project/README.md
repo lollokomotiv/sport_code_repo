@@ -33,11 +33,13 @@ the last touch of each rally.
 Matches of an amateur team (FIPAV Serie D), filmed with an iPhone at 1080p and 60 fps
 from the same spot as the gym's fixed camera, high behind an end line, under a
 [recording protocol](docs/protocollo-ripresa.md). The videos show real
-people and are **not public**: they live in `data/raw/` and are never committed.
+people and are **not public**: they live in `data/raw/<date>_<source>/` and are never
+committed.
 
 | Set | Role |
 |---|---|
 | Sample video (gym camera, 15 fps, 48 minutes) | first test of the ball tracker; 10 minutes labeled to try the labeling page, not used as ground truth |
+| Side-view iPhone clips (14 rallies, 30 fps, handheld, 2026-10-23) | trying the labeling page; later, testing the touch classifier on another viewpoint |
 | League match 1, labeled by hand | development and threshold tuning |
 | League match 2, labeled by hand | final measurement only, not looked at during development |
 | Public matches with a similar view | demo images and extra checks, never measurements |

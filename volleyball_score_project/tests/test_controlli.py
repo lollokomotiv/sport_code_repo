@@ -38,3 +38,15 @@ def test_ricezione_non_preceduta_da_una_battuta_e_un_problema():
 def test_muro_non_preceduto_da_un_attacco_e_un_problema():
     # Murare la battuta non è permesso.
     assert dove(controlla_scambio(scambio("SV BL"))) == [(7, 2)]
+
+
+def test_tocco_dopo_la_fine_dello_scambio_e_un_problema():
+    # Come lo scambio 1 della prima giornata: battuta a 27,2 s, fine segnata a 24,6 s.
+    s = Scambio(set=1, indice=1, tocchi=(Tocco(t=27.2, lato=VICINO, tipo="S"),),
+                lato_vincitore=LONTANO, t_fine=24.6)
+
+    assert dove(controlla_scambio(s)) == [(1, 1)]
+
+
+def test_scambio_che_non_comincia_con_una_battuta_e_un_problema():
+    assert dove(controlla_scambio(scambio("DL EL AL"))) == [(7, 1)]
