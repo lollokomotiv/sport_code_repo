@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.database import engine
 from app.routers import (
+    admin_export,
     admin_predictions,
     admin_seasons,
     admin_tabellone,
@@ -60,6 +61,7 @@ app.include_router(matches.router)
 app.include_router(predictions.router)
 app.include_router(admin_predictions.router)
 app.include_router(leaderboard.router)
+app.include_router(admin_export.router)
 
 
 @app.get("/")

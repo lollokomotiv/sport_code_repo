@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useState, type ReactNode } from 'react'
 
+import { downloadLeaderboardsXlsx } from '@/api/admin/export'
 import { getRoundPredictionsView } from '@/api/predictions'
 import { getLeaderboard, getRoundLeaderboard, getSpecialRankings } from '@/api/leaderboard'
 import { getRound, listRounds } from '@/api/rounds'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import OthersSlips from '@/components/OthersSlips'
 import { useAuthStore } from '@/store/authStore'
+import { errorMessage } from '@/utils'
 import type {
   LeaderboardEntry,
   RoundLeaderboardEntry,
@@ -39,7 +41,10 @@ export default function Leaderboard() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold">Classifica</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Classifica</h1>
+        {me?.role === 'admin' && <ExportButton />}
+      </div>
 
       <div className="mb-4 flex items-center gap-2">
         <TabBtn active={tab === 'generale'} onClick={() => setTab('generale')}>
@@ -295,6 +300,38 @@ function RoundDetailTab({ meId }: { meId?: string }) {
           withResults
         />
       )}
+    </div>
+  )
+}
+
+// ─── Export Excel (solo admin) ────────────────────────────────────────────────
+
+function ExportButton() {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function download() {
+    setPending(true)
+    setError(null)
+    try {
+      await downloadLeaderboardsXlsx()
+    } catch (err) {
+      setError(errorMessage(err, 'Download non riuscito.'))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {error && <span className="text-sm text-miss">{error}</span>}
+      <button
+        onClick={download}
+        disabled={pending}
+        className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-60"
+      >
+        {pending ? 'Preparo il file…' : 'Scarica .xlsx'}
+      </button>
     </div>
   )
 }

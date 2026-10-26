@@ -29,3 +29,6 @@ isort>=5.13.0
 mypy>=1.9.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+
+# Export Excel (classifiche admin)
+openpyxl>=3.1.0
