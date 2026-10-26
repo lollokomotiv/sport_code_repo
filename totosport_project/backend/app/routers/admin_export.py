@@ -52,7 +52,7 @@ async def round_xlsx(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> Response:
-    """Punti e schedine di una singola giornata (admin)."""
+    """Classifica di una singola giornata (admin)."""
     rnd = await get_round(round_id, db)
     if rnd is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Giornata non trovata")
@@ -61,5 +61,5 @@ async def round_xlsx(
     season = await get_season(rnd.season_id, db)
     if season is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Stagione della giornata non trovata")
-    content = await build_round_workbook(rnd, db)
+    content = await build_round_workbook(season, rnd, db)
     return _xlsx(content, round_filename(season, rnd))

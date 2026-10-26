@@ -3,7 +3,7 @@ Export delle classifiche in workbook Excel.
 
 Due file distinti:
 - `build_general_workbook`: classifica generale + classifiche speciali di stagione;
-- `build_round_workbook`: punti e schedine di UNA giornata.
+- `build_round_workbook`: classifica di UNA giornata.
 
 Le righe vengono SEMPRE prese dai service di classifica esistenti
 (`general_leaderboard`, `special_rankings`, `round_leaderboard`): qui non c'è
@@ -12,7 +12,6 @@ FastAPI-free come gli altri service: restituisce bytes, il router li serve.
 """
 
 import re
-import uuid
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -20,14 +19,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.match import Match
-from app.models.match_prediction import MatchPrediction
 from app.models.round import Round
 from app.models.season import Season
-from app.models.user import User
 from app.services.leaderboard import general_leaderboard, round_leaderboard, special_rankings
 
 # Etichette dei tre ranking speciali, nell'ordine in cui compaiono in app
@@ -134,40 +129,8 @@ async def build_general_workbook(season: Season, db: AsyncSession) -> bytes:
 # ─── File 2: una singola giornata ────────────────────────────────────────────
 
 
-async def _schedine_rows(round_id: uuid.UUID, db: AsyncSession) -> list[Row]:
-    """Previsioni di una giornata, una riga per previsione."""
-    result = await db.execute(
-        select(MatchPrediction, Match, User.username)
-        .join(Match, Match.id == MatchPrediction.match_id)
-        .join(User, User.id == MatchPrediction.player_id)
-        .where(Match.round_id == round_id)
-        .order_by(Match.kickoff.nulls_last(), Match.home_team, User.username)
-    )
-    rows: list[Row] = []
-    for mp, match, username in result.all():
-        risultato = (
-            f"{match.actual_home_goals}-{match.actual_away_goals}"
-            if match.actual_home_goals is not None and match.actual_away_goals is not None
-            else None
-        )
-        rows.append(
-            [
-                f"{match.home_team} - {match.away_team}",
-                username,
-                mp.predicted_sign,
-                mp.predicted_home_goals,
-                mp.predicted_away_goals,
-                "sì" if match.requires_exact_score else "no",
-                risultato,
-                mp.points_earned,
-                mp.submitted_at.replace(tzinfo=None) if mp.submitted_at else None,
-            ]
-        )
-    return rows
-
-
-async def build_round_workbook(rnd: Round, db: AsyncSession) -> bytes:
-    """Punti e schedine della giornata indicata: due fogli, nient'altro."""
+async def build_round_workbook(season: Season, rnd: Round, db: AsyncSession) -> bytes:
+    """Classifica della giornata indicata, piu un foglio Info di contesto."""
     wb = Workbook()
 
     ws = wb.active
@@ -202,19 +165,14 @@ async def build_round_workbook(rnd: Round, db: AsyncSession) -> bytes:
     )
 
     _write_sheet(
-        wb.create_sheet("Schedine"),
+        wb.create_sheet("Info"),
+        ["Voce", "Valore"],
         [
-            "Partita",
-            "Giocatore",
-            "Segno",
-            "Gol casa",
-            "Gol ospiti",
-            "Risultato esatto richiesto",
-            "Risultato reale",
-            "Punti",
-            "Inviata il",
+            ["Stagione", season.name],
+            ["Giornata", f"{rnd.name} ({rnd.status.value})"],
+            ["Generato il", datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)],
+            ["Schedine", "non incluse: si consultano in app, Classifica -> Dettaglio"],
         ],
-        await _schedine_rows(rnd.id, db),
     )
 
     return _to_bytes(wb)

@@ -25,7 +25,7 @@ export function downloadLeaderboardsXlsx(): Promise<void> {
   return downloadXlsx('/admin/export/leaderboards', 'Classifica_Generale.xlsx')
 }
 
-/** Punti e schedine di una singola giornata (solo admin). */
+/** Classifica di una singola giornata (solo admin). */
 export function downloadRoundXlsx(roundId: string): Promise<void> {
   return downloadXlsx(`/admin/export/rounds/${roundId}`, 'Giornata.xlsx')
 }

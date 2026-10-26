@@ -191,9 +191,11 @@ async def test_foglio_speciali_impila_i_tre_ranking(client: AsyncClient, setup):
 # ─── File della singola giornata ─────────────────────────────────────────────
 
 
-async def test_file_giornata_ha_due_fogli(client: AsyncClient, setup):
+async def test_file_giornata_ha_classifica_e_info(client: AsyncClient, setup):
+    """Le schedine non ci sono: si consultano in app."""
     _, wb = await _round(client, setup["admin"], setup["round"].id)
-    assert wb.sheetnames == ["Giornate", "Schedine"]
+    assert wb.sheetnames == ["Giornate", "Info"]
+    assert "Schedine" not in wb.sheetnames
 
 
 async def test_nome_file_giornata(client: AsyncClient, setup):
@@ -210,16 +212,12 @@ async def test_foglio_giornate_una_riga_per_giocatore(client: AsyncClient, setup
     assert {r[1] for r in rows} == {"completed"}
 
 
-async def test_foglio_schedine_riporta_segni_e_gol(client: AsyncClient, setup):
+async def test_foglio_info_giornata(client: AsyncClient, setup):
     _, wb = await _round(client, setup["admin"], setup["round"].id)
-    rows = _rows(wb["Schedine"])
-    assert len(rows) == 4
-
-    inter = {r[1]: r for r in rows if r[0] == "Inter - Milan"}
-    assert inter["p1"][2:8] == ("1", 2, 1, "sì", "2-1", 6)
-    # Sulla partita solo-segno i gol restano vuoti
-    roma = {r[1]: r for r in rows if r[0] == "Roma - Lazio"}
-    assert roma["p1"][2:8] == ("X", None, None, "no", "0-0", 1)
+    info = dict(_rows(wb["Info"]))
+    assert info["Stagione"] == "2025-26"
+    assert info["Giornata"] == "G1 (completed)"
+    assert "Dettaglio" in info["Schedine"]
 
 
 async def test_giornata_inesistente_404(client: AsyncClient, setup):
