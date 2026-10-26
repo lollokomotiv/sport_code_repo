@@ -6,23 +6,26 @@ function filenameFrom(disposition: string | undefined, fallback: string): string
   return match?.[1] ?? fallback
 }
 
-/**
- * Scarica le classifiche in un unico .xlsx (solo admin) e fa partire il
- * download nel browser. `includeSchedine` aggiunge il foglio con le previsioni
- * grezze di tutta la stagione.
- */
-export async function downloadLeaderboardsXlsx(includeSchedine = true): Promise<void> {
-  const { data, headers } = await api.get<Blob>('/admin/export/leaderboards', {
-    params: { include_schedine: includeSchedine },
-    responseType: 'blob',
-  })
+/** Scarica un .xlsx dall'endpoint indicato e fa partire il download nel browser. */
+async function downloadXlsx(url: string, fallbackName: string): Promise<void> {
+  const { data, headers } = await api.get<Blob>(url, { responseType: 'blob' })
 
-  const url = URL.createObjectURL(data)
+  const objectUrl = URL.createObjectURL(data)
   const link = document.createElement('a')
-  link.href = url
-  link.download = filenameFrom(headers['content-disposition'], 'totosport_classifiche.xlsx')
+  link.href = objectUrl
+  link.download = filenameFrom(headers['content-disposition'], fallbackName)
   document.body.appendChild(link)
   link.click()
   link.remove()
-  URL.revokeObjectURL(url)
+  URL.revokeObjectURL(objectUrl)
+}
+
+/** Classifica generale + speciali della stagione corrente (solo admin). */
+export function downloadLeaderboardsXlsx(): Promise<void> {
+  return downloadXlsx('/admin/export/leaderboards', 'Classifica_Generale.xlsx')
+}
+
+/** Punti e schedine di una singola giornata (solo admin). */
+export function downloadRoundXlsx(roundId: string): Promise<void> {
+  return downloadXlsx(`/admin/export/rounds/${roundId}`, 'Giornata.xlsx')
 }

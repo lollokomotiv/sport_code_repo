@@ -134,11 +134,19 @@ async def setup(db_session):
     return {"admin": admin, "p1": p1, "p2": p2, "season": season, "round": rnd}
 
 
-async def _workbook(client: AsyncClient, admin: User, **params):
-    r = await client.get("/admin/export/leaderboards", headers=_auth(admin), params=params)
+async def _workbook(client: AsyncClient, admin: User, url: str):
+    r = await client.get(url, headers=_auth(admin))
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == XLSX_MEDIA_TYPE
     return r, load_workbook(BytesIO(r.content))
+
+
+async def _general(client: AsyncClient, admin: User):
+    return await _workbook(client, admin, "/admin/export/leaderboards")
+
+
+async def _round(client: AsyncClient, admin: User, round_id):
+    return await _workbook(client, admin, f"/admin/export/rounds/{round_id}")
 
 
 def _rows(ws) -> list[tuple]:
@@ -146,24 +154,31 @@ def _rows(ws) -> list[tuple]:
     return list(ws.iter_rows(min_row=2, values_only=True))
 
 
-async def test_export_contiene_tutti_i_fogli(client: AsyncClient, setup):
-    r, wb = await _workbook(client, setup["admin"])
-    assert wb.sheetnames == ["Generale", "Speciali", "Giornate", "Schedine", "Info"]
-    assert "totosport_classifiche_2025-26" in r.headers["content-disposition"]
+async def test_file_generale_ha_solo_stagione_e_speciali(client: AsyncClient, setup):
+    """Niente dati per giornata nel file generale: quelli stanno nel file giornata."""
+    r, wb = await _general(client, setup["admin"])
+    assert wb.sheetnames == ["Generale", "Speciali", "Info"]
+    assert "Giornate" not in wb.sheetnames
+    assert "Schedine" not in wb.sheetnames
+
+
+async def test_nome_file_generale(client: AsyncClient, setup):
+    r, _ = await _general(client, setup["admin"])
+    assert 'filename="2025-26_Classifica_Generale.xlsx"' in r.headers["content-disposition"]
 
 
 async def test_foglio_generale_coincide_con_la_classifica_in_app(client: AsyncClient, setup):
     api = await client.get("/leaderboard", headers=_auth(setup["admin"]))
     expected = {row["username"]: row["total_points"] for row in api.json()}
 
-    _, wb = await _workbook(client, setup["admin"])
+    _, wb = await _general(client, setup["admin"])
     rows = _rows(wb["Generale"])
     assert {r[1]: r[2] for r in rows} == expected
     assert [r[0] for r in rows] == [1, 2]  # posizioni in ordine
 
 
 async def test_foglio_speciali_impila_i_tre_ranking(client: AsyncClient, setup):
-    _, wb = await _workbook(client, setup["admin"])
+    _, wb = await _general(client, setup["admin"])
     rows = _rows(wb["Speciali"])
     assert {r[0] for r in rows} == {"Segni", "Pieni", "Pieni 5+ gol"}
     # p1 ha preso 2 segni e 1 pieno; p2 nessuno
@@ -173,8 +188,21 @@ async def test_foglio_speciali_impila_i_tre_ranking(client: AsyncClient, setup):
     assert pieni == {"p1": 1, "p2": 0}
 
 
+# ─── File della singola giornata ─────────────────────────────────────────────
+
+
+async def test_file_giornata_ha_due_fogli(client: AsyncClient, setup):
+    _, wb = await _round(client, setup["admin"], setup["round"].id)
+    assert wb.sheetnames == ["Giornate", "Schedine"]
+
+
+async def test_nome_file_giornata(client: AsyncClient, setup):
+    r, _ = await _round(client, setup["admin"], setup["round"].id)
+    assert 'filename="2025-26_G1.xlsx"' in r.headers["content-disposition"]
+
+
 async def test_foglio_giornate_una_riga_per_giocatore(client: AsyncClient, setup):
-    _, wb = await _workbook(client, setup["admin"])
+    _, wb = await _round(client, setup["admin"], setup["round"].id)
     rows = _rows(wb["Giornate"])
     assert len(rows) == 2
     assert {r[3]: r[4] for r in rows} == {"p1": 13, "p2": 4}
@@ -183,23 +211,30 @@ async def test_foglio_giornate_una_riga_per_giocatore(client: AsyncClient, setup
 
 
 async def test_foglio_schedine_riporta_segni_e_gol(client: AsyncClient, setup):
-    _, wb = await _workbook(client, setup["admin"])
+    _, wb = await _round(client, setup["admin"], setup["round"].id)
     rows = _rows(wb["Schedine"])
     assert len(rows) == 4
 
-    inter = {r[2]: r for r in rows if r[1] == "Inter - Milan"}
-    assert inter["p1"][3:9] == ("1", 2, 1, "sì", "2-1", 6)
+    inter = {r[1]: r for r in rows if r[0] == "Inter - Milan"}
+    assert inter["p1"][2:8] == ("1", 2, 1, "sì", "2-1", 6)
     # Sulla partita solo-segno i gol restano vuoti
-    roma = {r[2]: r for r in rows if r[1] == "Roma - Lazio"}
-    assert roma["p1"][3:9] == ("X", None, None, "no", "0-0", 1)
+    roma = {r[1]: r for r in rows if r[0] == "Roma - Lazio"}
+    assert roma["p1"][2:8] == ("X", None, None, "no", "0-0", 1)
 
 
-async def test_schedine_escludibili(client: AsyncClient, setup):
-    _, wb = await _workbook(client, setup["admin"], include_schedine=False)
-    assert "Schedine" not in wb.sheetnames
-    assert wb.sheetnames == ["Generale", "Speciali", "Giornate", "Info"]
+async def test_giornata_inesistente_404(client: AsyncClient, setup):
+    r = await client.get(
+        "/admin/export/rounds/00000000-0000-0000-0000-000000000000",
+        headers=_auth(setup["admin"]),
+    )
+    assert r.status_code == 404
+
+
+# ─── Permessi ────────────────────────────────────────────────────────────────
 
 
 async def test_un_giocatore_non_puo_scaricare(client: AsyncClient, setup):
     r = await client.get("/admin/export/leaderboards", headers=_auth(setup["p1"]))
+    assert r.status_code == 403
+    r = await client.get(f"/admin/export/rounds/{setup['round'].id}", headers=_auth(setup["p1"]))
     assert r.status_code == 403

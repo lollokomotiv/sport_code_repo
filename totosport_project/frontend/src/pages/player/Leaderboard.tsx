@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useState, type ReactNode } from 'react'
 
-import { downloadLeaderboardsXlsx } from '@/api/admin/export'
+import { downloadLeaderboardsXlsx, downloadRoundXlsx } from '@/api/admin/export'
 import { getRoundPredictionsView } from '@/api/predictions'
 import { getLeaderboard, getRoundLeaderboard, getSpecialRankings } from '@/api/leaderboard'
 import { getRound, listRounds } from '@/api/rounds'
@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner'
 import OthersSlips from '@/components/OthersSlips'
 import { useAuthStore } from '@/store/authStore'
 import { errorMessage } from '@/utils'
+import type { RoundOut } from '@/types/round'
 import type {
   LeaderboardEntry,
   RoundLeaderboardEntry,
@@ -21,6 +22,12 @@ type Tab = 'generale' | 'speciali' | 'dettaglio'
 export default function Leaderboard() {
   const me = useAuthStore((s) => s.user)
   const [tab, setTab] = useState<Tab>('generale')
+  const [pickedRound, setPickedRound] = useState('')
+
+  // La query è la stessa del tab Dettaglio: React Query la serve dalla cache.
+  const roundsQuery = useQuery({ queryKey: ['rounds'], queryFn: listRounds })
+  const completedRounds = (roundsQuery.data ?? []).filter((r) => r.status === 'completed')
+  const detailRoundId = pickedRound || completedRounds[0]?.id || ''
 
   const generalQuery = useQuery({
     queryKey: ['leaderboard'],
@@ -43,7 +50,17 @@ export default function Leaderboard() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Classifica</h1>
-        {me?.role === 'admin' && <ExportButton />}
+        {me?.role === 'admin' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportButton label="Scarica generale" download={downloadLeaderboardsXlsx} />
+            {tab === 'dettaglio' && detailRoundId && (
+              <ExportButton
+                label="Scarica giornata"
+                download={() => downloadRoundXlsx(detailRoundId)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex items-center gap-2">
@@ -97,7 +114,13 @@ export default function Leaderboard() {
           </div>
         )
       ) : (
-        <RoundDetailTab meId={me?.id} />
+        <RoundDetailTab
+          meId={me?.id}
+          rounds={completedRounds}
+          roundId={detailRoundId}
+          onPick={setPickedRound}
+          loading={roundsQuery.isLoading}
+        />
       )}
     </div>
   )
@@ -203,13 +226,19 @@ function MiniRanking({
 
 // ─── Tab "Dettaglio": una giornata alla volta, punti + schedine ────────────────
 
-function RoundDetailTab({ meId }: { meId?: string }) {
-  const roundsQuery = useQuery({ queryKey: ['rounds'], queryFn: listRounds })
-  const completed = (roundsQuery.data ?? []).filter((r) => r.status === 'completed')
-
-  const [picked, setPicked] = useState('')
-  const roundId = picked || completed[0]?.id || ''
-
+function RoundDetailTab({
+  meId,
+  rounds,
+  roundId,
+  onPick,
+  loading,
+}: {
+  meId?: string
+  rounds: RoundOut[]
+  roundId: string
+  onPick: (id: string) => void
+  loading: boolean
+}) {
   const breakdownQuery = useQuery({
     queryKey: ['round-leaderboard', roundId],
     queryFn: () => getRoundLeaderboard(roundId),
@@ -226,8 +255,8 @@ function RoundDetailTab({ meId }: { meId?: string }) {
     enabled: !!roundId,
   })
 
-  if (roundsQuery.isLoading) return <LoadingSpinner />
-  if (completed.length === 0) {
+  if (loading) return <LoadingSpinner />
+  if (rounds.length === 0) {
     return <p className="text-neutral-500">Nessuna giornata completata da mostrare.</p>
   }
 
@@ -237,10 +266,10 @@ function RoundDetailTab({ meId }: { meId?: string }) {
         <span className="text-neutral-600">Giornata:</span>
         <select
           value={roundId}
-          onChange={(e) => setPicked(e.target.value)}
+          onChange={(e) => onPick(e.target.value)}
           className="rounded-lg border px-3 py-2"
         >
-          {completed.map((r) => (
+          {rounds.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
             </option>
@@ -306,15 +335,15 @@ function RoundDetailTab({ meId }: { meId?: string }) {
 
 // ─── Export Excel (solo admin) ────────────────────────────────────────────────
 
-function ExportButton() {
+function ExportButton({ label, download }: { label: string; download: () => Promise<void> }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function download() {
+  async function run() {
     setPending(true)
     setError(null)
     try {
-      await downloadLeaderboardsXlsx()
+      await download()
     } catch (err) {
       setError(errorMessage(err, 'Download non riuscito.'))
     } finally {
@@ -326,11 +355,11 @@ function ExportButton() {
     <div className="flex items-center gap-2">
       {error && <span className="text-sm text-miss">{error}</span>}
       <button
-        onClick={download}
+        onClick={run}
         disabled={pending}
         className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-60"
       >
-        {pending ? 'Preparo il file…' : 'Scarica .xlsx'}
+        {pending ? 'Preparo il file…' : label}
       </button>
     </div>
   )
