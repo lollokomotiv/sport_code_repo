@@ -110,6 +110,7 @@ CC BY-NC-ND 4.0 nel README): non se ne copia codice.
   Chrome o Safari. Le sue regole sono una copia di `lib/scambio.py` per i suggerimenti: se
   cambiano in Python vanno cambiate anche lì. Il CSV esportato si legge con
   `lib/etichette.py` e si controlla con `.venv/bin/python -m lib.etichette <file>`.
-- `prototipi/`: codice usa e getta delle prove, fuori da `main` (ramo `prototipo/...`).
+- `prototipi/`: script usa e getta delle prove, uno per domanda; il risultato sta nella
+  issue citata nel README della cartella. Non fanno parte dell'app.
 - Commenti, docstring e documentazione in italiano; `README.md` in inglese.
 - I commenti spiegano perché, non cosa.
