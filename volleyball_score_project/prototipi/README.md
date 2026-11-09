@@ -10,3 +10,5 @@ leggono dati privati in `data/` e `output/`, fuori da git.
 | `richiamo_13.py` | #13 | il tracker vede la palla sui tocchi etichettati a mano? |
 | `campo_19.py` | #19 | calibrazione del campo dal colore e dalle righe |
 | `scambi_19.py` | #19 | scambi trovati dal tracker contro quelli etichettati |
+| `verticale_19.py` | #19 | il tracker regge una diretta verticale molto compressa? |
+| `tocchi_19.py` | #19 | quanti tocchi etichettati si trovano dalle sole rotture della traiettoria? |
