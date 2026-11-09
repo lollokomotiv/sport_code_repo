@@ -96,7 +96,9 @@ def proponi_tipi(tocchi: list[Tocco]) -> list[str]:
                 tipi.append("R" if tipi[-1] == "S" else "D")
         else:
             posizione += 1
-            tipi.append(TIPI_PER_POSIZIONE[posizione])
+            # Oltre il terzo tocco qualcosa è sbagliato (muro lento, lato invertito):
+            # si propone l'attacco, come la pagina, e lo segnala controlla_scambio.
+            tipi.append(TIPI_PER_POSIZIONE.get(posizione, "A"))
     return tipi
 
 

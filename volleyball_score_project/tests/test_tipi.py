@@ -38,3 +38,9 @@ def test_il_muro_non_conta_tra_i_tre_tocchi():
 
 def test_secondo_tocco_che_passa_la_rete_e_un_attacco_di_seconda():
     assert proponi_tipi(tocchi("V:0 L:1 L:2 V:3")) == ["S", "R", "A", "D"]
+
+
+def test_oltre_il_terzo_tocco_dalla_stessa_parte_propone_attacco():
+    # Un muro più lento della soglia sembra una difesa e il possesso arriva a quattro.
+    sequenza = "V:0 L:1 L:2 L:3 V:3.5 V:4 V:5 V:6"
+    assert proponi_tipi(tocchi(sequenza)) == ["S", "R", "E", "A", "D", "E", "A", "A"]

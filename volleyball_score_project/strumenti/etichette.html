@@ -23,6 +23,13 @@
   main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; height: calc(100vh - 50px); }
   #colonna-video { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
   video { width: 100%; max-height: calc(100vh - 200px); background: black; border-radius: 4px; }
+  #schermo { display: flex; gap: 8px; align-items: flex-start; min-height: 0; }
+  #zoom { display: none; flex: 1 1 0; min-width: 0; max-height: calc(100vh - 200px); object-fit: contain; object-position: top; background: black; border-radius: 4px; }
+  #schermo.zoom #zoom { display: block; }
+  #schermo.zoom video { width: 200px; flex: none; }
+  #fascia { display: none; gap: 6px; align-items: center; }
+  #fascia.attiva { display: inline-flex; }
+  #fascia input { width: 90px; }
   #barra { display: flex; gap: 16px; color: var(--tenue); flex-wrap: wrap; }
   #pannello { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
   .scheda { background: white; border: 1px solid var(--bordo); border-radius: 6px; padding: 10px; }
@@ -63,13 +70,16 @@
   <button id="importa">Importa CSV…</button>
   <input type="file" id="file-csv" accept=".csv,text/csv" hidden>
   <label><input type="checkbox" id="pausa"> pausa a ogni tocco</label>
+  <label title="Ingrandisce una fascia del fotogramma; si accende da solo con i video verticali"><input type="checkbox" id="zoom-campo"> zoom sul campo</label>
   <span id="tasti-stato"></span>
   <span id="stato" class="tenue"></span>
 </header>
 <main>
   <div id="colonna-video">
-    <video id="video" controls playsinline></video>
-    <div id="barra"><span id="tempo">0.00 s</span><span id="velocita">velocità 1×</span><span id="ultimo"></span><span id="eco"></span></div>
+    <div id="schermo"><canvas id="zoom"></canvas><video id="video" controls playsinline></video></div>
+    <div id="barra"><span id="tempo">0.00 s</span><span id="velocita">velocità 1×</span>
+      <span id="fascia">fascia: alto <input type="range" id="zoom-alto" min="0" max="100"> basso <input type="range" id="zoom-basso" min="0" max="100"></span>
+      <span id="ultimo"></span><span id="eco"></span></div>
     <div id="note">
       <p><b>Il colore è la metà campo, non la squadra.</b> <span class="vicino nota-colore">blu</span> = vicino alla camera (o sinistra con l'inquadratura laterale), <span class="lontano nota-colore">arancio</span> = lontano (o destra). Dopo ogni numero guarda il colore: se è giusto vai avanti.</p>
       <p><b>Come la pagina ricava il lato:</b> dopo battuta, attacco o free ball la palla passa di là; ricezione e muro stanno sempre dall'altra parte; alzata e difesa restano dalla stessa parte. Dopo un muro assume che difenda chi ha murato: se invece la palla torna a chi ha attaccato (copertura), dopo il <kbd>6</kbd> premi <kbd>L</kbd>. La battuta la fa chi ha vinto lo scambio prima; solo per la prima del set la pagina chiede chi batte.</p>
@@ -201,7 +211,9 @@ function modifica(azione) {
 
 function annulla() {
   if (!storia.length) return;
+  const zoom = stato.zoom;  // lo zoom non è un'etichetta: U non lo tocca
   stato = JSON.parse(storia.pop());
+  stato.zoom = zoom;
   salva();
   disegna();
 }
@@ -511,6 +523,48 @@ function cambiaVelocita(passo) {
 
 video.ontimeupdate = () => { $("tempo").textContent = `${video.currentTime.toFixed(2)} s`; };
 
+// Nei video verticali il campo occupa una fascia stretta del fotogramma. Lo zoom ridisegna
+// quella fascia grande su una tela e lascia accanto il video intero, piccolo, coi suoi
+// controlli. La fascia predefinita (in % dell'altezza) viene dalla diretta verticale della
+// 3ª giornata e tiene lo spazio sopra il campo per le palle alte; i cursori la spostano.
+const FASCIA_VERTICALE = { alto: 23, basso: 70 };
+const tela = $("zoom"), pennello = tela.getContext("2d");
+
+function disegnaZoom() {
+  const z = stato.zoom;
+  if (!z || !z.attivo || !video.videoWidth) return;
+  const w = video.videoWidth, y0 = Math.round(video.videoHeight * z.alto / 100);
+  const h = Math.max(1, Math.round(video.videoHeight * z.basso / 100) - y0);
+  if (tela.width !== w || tela.height !== h) { tela.width = w; tela.height = h; }
+  pennello.drawImage(video, 0, y0, w, h, 0, 0, w, h);
+}
+
+function applicaZoom() {
+  if (!stato.zoom) stato.zoom = { attivo: false, ...FASCIA_VERTICALE };
+  const z = stato.zoom;
+  $("schermo").classList.toggle("zoom", z.attivo);
+  $("fascia").classList.toggle("attiva", z.attivo);
+  $("zoom-campo").checked = z.attivo;
+  $("zoom-alto").value = z.alto;
+  $("zoom-basso").value = z.basso;
+  disegnaZoom();
+}
+
+video.addEventListener("loadedmetadata", () => {
+  if (!stato.zoom) stato.zoom = { attivo: video.videoHeight > video.videoWidth, ...FASCIA_VERTICALE };
+  applicaZoom();
+});
+$("zoom-campo").onchange = () => {
+  stato.zoom = { ...FASCIA_VERTICALE, ...stato.zoom, attivo: $("zoom-campo").checked };
+  applicaZoom();
+  salva();
+};
+$("zoom-alto").oninput = () => { stato.zoom.alto = Math.min(+$("zoom-alto").value, stato.zoom.basso - 5); applicaZoom(); };
+$("zoom-basso").oninput = () => { stato.zoom.basso = Math.max(+$("zoom-basso").value, stato.zoom.alto + 5); applicaZoom(); };
+for (const id of ["zoom-alto", "zoom-basso"]) $(id).onchange = salva;
+// Ridisegna a ogni fotogramma dello schermo: copre riproduzione, salti e passo a passo.
+(function ciclo() { disegnaZoom(); requestAnimationFrame(ciclo); })();
+
 // Dopo un clic sui controlli del video (play, barra di avanzamento) Chrome tiene il
 // fuoco dentro i controlli e non passa più i tasti alla pagina. Il fuoco si toglie
 // appena arriva: il clic ha già fatto il suo effetto, e Spazio e frecce li gestisce la pagina.
@@ -520,7 +574,7 @@ for (const evento of ["focus", "mouseup", "seeked", "play", "pause"]) video.addE
 // I tasti non funzionano mentre il cursore è in un campo: lo si dice, e Esc lo libera.
 function inUnCampo(el) {
   return el && (el.tagName === "SELECT" || el.tagName === "TEXTAREA" ||
-    (el.tagName === "INPUT" && !["checkbox", "file", "button"].includes(el.type)));
+    (el.tagName === "INPUT" && !["checkbox", "file", "button", "range"].includes(el.type)));
 }
 function aggiornaTasti() {
   const fermi = inUnCampo(document.activeElement);
