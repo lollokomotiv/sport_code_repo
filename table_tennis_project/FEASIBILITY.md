@@ -81,8 +81,21 @@ depends on being able to track the ball — keep it as phase 2, not an initial r
 
 ---
 
-## Suggested next step (on paper, no code yet)
+## How the design answers these risks (November 2026)
 
-Write down two things together, since they unlock everything else:
-1. The **stroke taxonomy** (the closed list of action classes).
-2. The **operational definition of an error** (what objectively counts as a wrong shot).
+The two open points above are settled; details in [docs/adr/](docs/adr/).
+
+| Risk | Decision |
+|---|---|
+| Task B, defining an error | Derived from rally structure, not judged visually: the last stroke of a rally is an error if its player lost the point, a winner otherwise. No net/out, no forced/unforced (ADR-0001). |
+| Who won the point | Read from the flip scoreboard, boxed by hand once per video; game rules flag inconsistencies (ADR-0003). |
+| Taxonomy | Two axes: side (forehand/backhand) and type (serve, topspin, flick, push, block, smash, other with optional sub-type). |
+| Temporal boundaries | A stroke is a single impact frame, not a start/end segment (ADR-0002). |
+| The ball | Not needed for the MVP. Impacts come from pose plus audio; a go/no-go threshold is fixed in advance (ADR-0005). |
+| Footage heterogeneity | One camera setup only: singles, tripod in a corner, diagonal view (ADR-0006). Data split by YouTube channel; final measurement on matches filmed to a protocol (ADR-0004). |
+| Near vs far player, handedness | Entered by hand at the start of each video; left-handers are mirrored (ADR-0008). Metrics reported separately for near and far. |
+| Annotation cost | A keyboard-driven labeller that later doubles as the review screen, pre-filled by the model. |
+
+Still open, and only answerable by measuring: whether pose plus audio find enough
+impacts (blocks and pushes barely move the wrist; neighbouring tables are audible),
+and how much worse the far player is.
