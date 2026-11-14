@@ -61,9 +61,10 @@ Il repo è pubblico. I video amatoriali ritraggono persone reali:
 
 - non si versionano video, frame, ritagli, GIF o figure che mostrano i giocatori.
   Stanno in `data/`, ignorata da git;
-- il CSV dei video versionato contiene id, canale, formato, fps, risoluzione, audio,
-  licenza e note, **non titoli né nomi**. I titoli stanno in un file locale in
-  `data/`;
+- il CSV dei video versionato contiene id, codice del canale (`c01`, `c02`...),
+  formato, fps, risoluzione, audio, licenza e note, **non titoli né nomi**: molti
+  canali hanno il nome di una persona. Titoli e corrispondenza codice → canale stanno
+  in un file locale in `data/`;
 - le immagini pubbliche sono schemi del tavolo, oppure clip con i volti sfocati;
 - prima di produrre qualunque immagine destinata a uscire dal computer, chiedi;
 - le partite filmate a protocollo richiedono il consenso dell'avversario.
@@ -72,11 +73,16 @@ Il repo è pubblico. I video amatoriali ritraggono persone reali:
 
 - **YouTube**: singolare, diagonale da un angolo, tavolo intero, almeno 1080p,
   segnapunti visibile nei video continui. 50-60 fps preferiti, 30 fps accettati e
-  segnati. Colonne `formato` (continuo, completo-tagliato, highlights) e `audio`
+  segnati, sotto i 30 fps si scarta. Colonne `formato` (continuo, completo-tagliato, highlights) e `audio`
   (reale, musica, assente).
-- **Divisione** (ADR-0004): training e validazione per canale; la validazione contiene
-  solo video continui; il test è fatto solo di partite filmate a protocollo, con almeno
-  una mai aperta durante lo sviluppo.
+- **Divisione** (ADR-0004): training, validazione e test per canale; validazione e test
+  contengono solo video continui. Il test sono 1-2 canali YouTube tenuti da parte più
+  almeno una partita filmata a protocollo, mai aperti durante lo sviluppo. I numeri
+  del test si riportano separati per giocatori già visti nel training e mai visti.
+- I video in cui gioca l'utente entrano nel training: le sue partite nel test contano
+  come giocatore già visto.
+- Al massimo 5 partite intere per canale nel training, perché un canale con decine di
+  partite riempirebbe il training con la sua palestra.
 - Gli highlights servono solo al classificatore dei colpi e alle classi rare. Il
   rilevatore degli impatti si allena e si misura solo su audio reale.
 - **OpenTTGames** (CC BY-NC-SA 4.0, camera di lato centrata, 120 fps): banco di prova

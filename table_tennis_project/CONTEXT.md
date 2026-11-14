@@ -40,8 +40,8 @@ uno dei due arriva a 5 punti.
 _Avoid_: rotazione
 
 **Segnapunti**:
-Il tabellone a ribaltina, girato a mano, che mostra il punteggio del set e a volte i
-set vinti.
+Ciò che nel video mostra il punteggio del set e a volte i set vinti: il tabellone a
+ribaltina girato a mano, oppure il punteggio in sovrimpressione aggiunto al montaggio.
 _Avoid_: scoreboard, tabellone elettronico
 
 ## Giocatori

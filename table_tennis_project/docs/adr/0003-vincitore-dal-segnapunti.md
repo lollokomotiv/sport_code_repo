@@ -3,8 +3,9 @@
 Nel tennistavolo il servizio cambia ogni 2 punti chiunque vinca, quindi, a
 differenza della pallavolo, il vincitore del punto non si ricava dalla sequenza
 degli scambi. Nei video amatoriali ripresi di lato il segnapunti a ribaltina è quasi
-sempre in quadro: chi imposta il video ne indica il riquadro e a chi corrisponde
-ogni metà, e il vincitore è il giocatore il cui numero aumenta. Basta riconoscere le
+sempre in quadro, e nei video montati spesso c'è il punteggio in sovrimpressione: in
+entrambi i casi chi imposta il video ne indica il riquadro e a chi corrisponde ogni
+metà, e il vincitore è il giocatore il cui numero aumenta. Basta riconoscere le
 cifre in un ritaglio fisso, senza OCR generico e senza seguire la pallina.
 
 ## Consequences
